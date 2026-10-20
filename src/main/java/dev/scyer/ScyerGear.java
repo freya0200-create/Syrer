@@ -13,6 +13,7 @@ import net.minecraft.world.item.equipment.*;
 import net.minecraft.core.component.DataComponents;
 
 public final class ScyerGear {
+    public static final int ARMOR_DURABILITY = 5000;
     public static final Map<String, Item> ITEMS = new LinkedHashMap<>();
     private static final ArmorType[] TYPES = {ArmorType.HELMET, ArmorType.CHESTPLATE, ArmorType.LEGGINGS, ArmorType.BOOTS};
     private static final EquipmentSlot[] SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
@@ -58,7 +59,7 @@ public final class ScyerGear {
         String[] suffix = {"helmet", "chestplate", "leggings", "boots"};
         for (int i = 0; i < 4; i++) {
             String id = name + "_" + suffix[i];
-            result[i] = register(id, new Item(new Item.Properties().humanoidArmor(material, TYPES[i]).fireResistant().setId(key(id))));
+            result[i] = register(id, new Item(new Item.Properties().humanoidArmor(material, TYPES[i]).durability(ARMOR_DURABILITY).fireResistant().setId(key(id))));
         }
         return result;
     }
@@ -75,9 +76,9 @@ public final class ScyerGear {
         List<ItemStack> drops = new ArrayList<>();
         if (stage >= 2) for (Item item : stage == 2 ? ADAMANTIUM : URU) {
             ItemStack armor = new ItemStack(item);
-            // This is the actual MAXIMUM durability of a dropped piece, not just cosmetic damage.
-            armor.set(DataComponents.MAX_DAMAGE, 20 + random.nextInt(31));
-            armor.setDamageValue(0); drops.add(armor);
+            // Full-size armor, dropped badly damaged: repair can restore all 5,000 durability.
+            armor.setDamageValue(ARMOR_DURABILITY - (20 + random.nextInt(31)));
+            drops.add(armor);
         }
         if (stage == 4) {
             if (random.nextFloat() < .50F) drops.add(new ItemStack(URU_PICKAXE));

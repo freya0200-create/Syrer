@@ -335,7 +335,9 @@ public final class ScyerGameTests {
         context.assertTrue(drops.size()==4,"Level two must actually drop exactly four Adamantium armor pieces on death");
         for(var drop:drops){var stack=drop.getItem();
             context.assertTrue(java.util.Arrays.asList(ScyerGear.ADAMANTIUM).contains(stack.getItem()),"No undamaged vanilla equipment may leak into boss drops");
-            context.assertTrue(stack.getMaxDamage()>=20 && stack.getMaxDamage()<=50,"Dropped armor must have 20-50 maximum durability");
+            context.assertTrue(stack.getMaxDamage()==5000,"Dropped armor must retain 5000 maximum durability");
+            int remaining=stack.getMaxDamage()-stack.getDamageValue();
+            context.assertTrue(remaining>=20 && remaining<=50,"Dropped armor must have only 20-50 durability remaining");
             context.assertTrue(stack.getCount()==1,"Each armor piece must drop once");}
         context.succeed();
     }
@@ -352,6 +354,13 @@ public final class ScyerGameTests {
             context.assertTrue(drops.size()==entry.getValue(),"Independent 50/10/4/35 percent rolls must obey their exact boundaries; roll="+entry.getKey());
         }
         context.assertTrue(ScyerGear.deathDrops(1,new Fixed(0)).isEmpty(),"Level one has no armor or weapon loot");
+        for(int stage=2;stage<=4;stage++) for(var stack:ScyerGear.deathDrops(stage,new Fixed(.99F))) {
+            context.assertTrue(stack.getMaxDamage()==5000,"Every Adamantium/Uru armor piece must have 5000 total durability");
+            int remaining=stack.getMaxDamage()-stack.getDamageValue();
+            context.assertTrue(remaining>=20 && remaining<=50,"Each armor drop must have 20-50 remaining, not maximum, durability");
+            context.assertTrue(new net.minecraft.world.item.ItemStack(stack.getItem()).getMaxDamage()==5000,
+                "A newly created or fully repaired armor piece must support 5000 durability");
+        }
         var uruMace=new net.minecraft.world.item.ItemStack(ScyerGear.URU_MACE);
         context.assertTrue(uruMace.getItem() instanceof net.minecraft.world.item.MaceItem && uruMace.is(net.minecraft.tags.ItemTags.MACE_ENCHANTABLE),"Uru mace must have real smash behavior and vanilla mace enchantment compatibility");
         context.succeed();

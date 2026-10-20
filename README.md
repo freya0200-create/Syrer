@@ -1,6 +1,6 @@
 # Scyer
 
-A Minecraft **Java Edition 26.2 / Fabric** horror boss mod, version **1.6.1**. Requires **Java 25**, **Fabric Loader 0.19.5+** and **Fabric API 0.161.0+26.2** (or a compatible newer Fabric API for 26.2).
+A Minecraft **Java Edition 26.2 / Fabric** horror boss mod, version **1.6.2**. Requires **Java 25**, **Fabric Loader 0.19.5+** and **Fabric API 0.161.0+26.2** (or a compatible newer Fabric API for 26.2).
 
 ## Relentless tracking
 
@@ -34,14 +34,16 @@ In the Overworld, stalking attempts run every thirty seconds on supported, loade
 - Level 1: no armor drops.
 - Level 2: a full Adamantium armor set.
 - Levels 3 and 4: a full Uru armor set.
-- Each dropped armor piece has a randomly selected **20–50 maximum durability**, even after repair.
+- Each armor piece has **5,000 maximum durability**. Dropped pieces are damaged so only **20–50 durability remains**; repair can restore them up to the full 5,000.
 - Level 4 independently rolls **50% Uru pickaxe**, **10% Uru sword**, **4% Uru mace** and **35% Uru axe**. Several weapons can drop together, or none. Looting does not change these percentages.
 
 The tools are functional equipment with 4,096 durability: the pickaxe mines at netherite harvest level, the axe can strip/scrape, the sword attacks normally, and the mace retains real smash behavior and accepts vanilla mace enchantments. Armor and weapons appear in the relevant creative tabs. Ordinary mob-loot gamerules apply.
 
 ## Install and spawn
 
-Replace your older Syrer/Scyer mod JAR with `build/libs/scyer-1.6.1+mc26.2.jar` in the instance's `mods` folder. Keep Fabric API installed. Install the same versions on client and server. Old `syrer` namespaces are not migrated. Existing `scyer` entities are upgraded on load; use a fresh creature to compare the levels.
+Get the one-click JAR download from [GitHub Releases](https://github.com/freya0200-create/Syrer/releases/latest).
+
+Replace your older Syrer/Scyer mod JAR with `build/libs/scyer-1.6.2+mc26.2.jar` in the instance's `mods` folder. Keep Fabric API installed. Install the same versions on client and server. Old `syrer` namespaces are not migrated. Existing `scyer` entities are upgraded on load; use a fresh creature to compare the levels.
 
 The Spawn Eggs tab contains **Level 1 Scyer Spawn Egg** through **Level 4 Scyer Spawn Egg**:
 
