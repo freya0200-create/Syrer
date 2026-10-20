@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.scyer.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "ServerWorldMixin",
+    "PlaySoundCommandMixin",
+    "FaintedMovementMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

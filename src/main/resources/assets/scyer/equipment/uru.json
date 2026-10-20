@@ -1,0 +1,14 @@
+{
+  "layers": {
+    "humanoid": [
+      {
+        "texture": "scyer:uru"
+      }
+    ],
+    "humanoid_leggings": [
+      {
+        "texture": "scyer:uru"
+      }
+    ]
+  }
+}
