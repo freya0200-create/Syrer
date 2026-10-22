@@ -1,6 +1,6 @@
 # Scyer
 
-A Minecraft **Java Edition 26.2 / Fabric** horror boss mod, version **1.6.2**. Requires **Java 25**, **Fabric Loader 0.19.5+** and **Fabric API 0.161.0+26.2** (or a compatible newer Fabric API for 26.2).
+A Minecraft **Java Edition 26.2 / Fabric** horror boss mod, version **1.6.3**. Requires **Java 25**, **Fabric Loader 0.19.5+** and **Fabric API 0.161.0+26.2** (or a compatible newer Fabric API for 26.2).
 
 ## Relentless tracking
 
@@ -25,6 +25,8 @@ Scyer alternates a **Sharpness III netherite-sword-equivalent claw hit (10 HP ra
 
 Regeneration II resumes after five seconds without taking damage. Sustained attacks pause it, so healing does not cancel the fifty-hit target. The roar's movement/action lock now lasts exactly **50 ticks / 2.5 seconds**, with the existing ten-block radius and twenty-second cooldown.
 
+Full-set protection is ordered **netherite < Adamantium < Uru**: armor points are **20 / 24 / 30**, effective toughness is **12 / 16 / 20** (Minecraft caps toughness at 20), and knockback resistance is **0.4 / 0.6 / 0.8**. Adamantium is reduced from the previous Uru-like protection; Uru retains its existing strength. Both custom sets keep 5,000 maximum durability and drop with 20–50 remaining.
+
 ## Death upgrades and loot
 
 Only **one Scyer may exist across the entire server**, including unloaded chunks and other dimensions. All four entity types, natural spawns, commands, eggs and stalking spawns share that slot. A death advances the world's next natural/stalking level, capped at four. Progression and each entity's level are saved across restarts; unloading or discarding an entity does not count as a death. The slot releases when its death animation finishes/removal occurs. Creative-mode eggs replace the previous Scyer, including an unloaded one, with exactly one new creature of the selected level. This replacement gives no loot and does not advance evolution. Survival-mode eggs preserve the cap and print a clear message when blocked.
@@ -43,7 +45,7 @@ The tools are functional equipment with 4,096 durability: the pickaxe mines at n
 
 Get the one-click JAR download from [GitHub Releases](https://github.com/freya0200-create/Syrer/releases/latest).
 
-Replace your older Syrer/Scyer mod JAR with `build/libs/scyer-1.6.2+mc26.2.jar` in the instance's `mods` folder. Keep Fabric API installed. Install the same versions on client and server. Old `syrer` namespaces are not migrated. Existing `scyer` entities are upgraded on load; use a fresh creature to compare the levels.
+Replace your older Syrer/Scyer mod JAR with `build/libs/scyer-1.6.3+mc26.2.jar` in the instance's `mods` folder. Keep Fabric API installed. Install the same versions on client and server. Old `syrer` namespaces are not migrated. Existing `scyer` entities are upgraded on load; use a fresh creature to compare the levels.
 
 The Spawn Eggs tab contains **Level 1 Scyer Spawn Egg** through **Level 4 Scyer Spawn Egg**:
 
@@ -80,6 +82,6 @@ Cloud tasks use the existing `/workspace/Syrer` checkout; do not create a Git wo
 
 Use `gradlew.bat` on Windows. The wrapper pins Gradle 9.7.1 with its checksum; Loom is 1.18.4. Generated model sources and texture assets are checked in. Optional regeneration uses `python tools/generate_scyer_model.py` and `python tools/generate_gear_assets.py` (the latter requires Pillow).
 
-The suite has three balance tests and nineteen Scyer server GameTests (plus Minecraft's built-in always-pass case). It checks immediate player-first attacks and mob fallback; through-wall/100-block tracking; all four egg levels and walking; every level surviving 49 native six-block Density V smashes and dying on hit 50; the new sword/mace attack strengths and real armor/Protection reductions; ordinary explosion damage; Breach; actual death drops and fragile durability; independent loot rolls; saved evolution and entity levels; distant spawning; the population cap; precisely 2.5 seconds of immobilization; and regeneration cooldown. Regression tests exercise actual Creative egg clicks replacing all four levels, actual reset/spawn/vanilla-summon commands, old-format save migration, ghost-slot recovery, permanent rejection of retired unloaded creatures, and safe failure in Peaceful or without room. Tests keep the real cap enabled and are excluded from the release JAR.
+The suite has three balance tests and twenty Scyer server GameTests (plus Minecraft's built-in always-pass case). It checks immediate player-first attacks and mob fallback; through-wall/100-block tracking; all four egg levels and walking; every level surviving 49 native six-block Density V smashes and dying on hit 50; the new sword/mace attack strengths and real armor/Protection reductions; ordinary explosion damage; Breach; actual death drops and fragile durability; independent loot rolls; saved evolution and entity levels; distant spawning; the population cap; precisely 2.5 seconds of immobilization; and regeneration cooldown. Regression tests exercise actual Creative egg clicks replacing all four levels, actual reset/spawn/vanilla-summon commands, old-format save migration, ghost-slot recovery, permanent rejection of retired unloaded creatures, and safe failure in Peaceful or without room. Tests keep the real cap enabled and are excluded from the release JAR.
 
 Headless model checks verify all four variants, armor/weapon visibility, jaw/claw animations and pose resets. Actual appearance, sounds, item rendering and movement on complex terrain still need graphical Minecraft testing. Visual credits and license terms are in [VISUAL_CREDITS.md](VISUAL_CREDITS.md).

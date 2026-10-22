@@ -491,4 +491,34 @@ public final class ScyerGameTests {
         FIXTURES.addAll(spawned);context.succeed();
     }
 
+    @GameTest(maxTicks = 60, padding = 32, environment = "scyer_gametest:adamantium_protects_between_netherite_and_uru")
+    public void adamantiumProtectsBetweenNetheriteAndUru(GameTestHelper context) {
+        floor(context);
+        var player=survivalPlayer(context);player.setPos(Vec3.atBottomCenterOf(context.absolutePos(new BlockPos(3,2,3))));
+        player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).setBaseValue(1000);
+        var attacker=context.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE,6,2,6);attacker.setNoAi(true);
+        var sets=new net.minecraft.world.item.Item[][]{
+            {Items.NETHERITE_HELMET,Items.NETHERITE_CHESTPLATE,Items.NETHERITE_LEGGINGS,Items.NETHERITE_BOOTS},
+            ScyerGear.ADAMANTIUM,ScyerGear.URU};
+        var slots=new net.minecraft.world.entity.EquipmentSlot[]{net.minecraft.world.entity.EquipmentSlot.HEAD,
+            net.minecraft.world.entity.EquipmentSlot.CHEST,net.minecraft.world.entity.EquipmentSlot.LEGS,net.minecraft.world.entity.EquipmentSlot.FEET};
+        context.runAtTickTime(5,()->{
+            for(float hit:new float[]{40,80,120}) {
+                float[] taken=new float[3];
+                for(int tier=0;tier<3;tier++) {
+                    for(int piece=0;piece<4;piece++)player.setItemSlot(slots[piece],new net.minecraft.world.item.ItemStack(sets[tier][piece]));
+                    player.doTick();player.setHealth(1000);player.invulnerableTime=0;
+                    context.assertTrue(player.getArmorValue()==new int[]{20,24,30}[tier],"Each tier must equip its real armor attributes");
+                    context.assertTrue(player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS)==new int[]{12,16,20}[tier],
+                        "Effective toughness must order netherite 12 < Adamantium 16 < Uru 20 (vanilla cap)");
+                    player.hurtServer(context.getLevel(),context.getLevel().damageSources().mobAttack(attacker),hit);
+                    taken[tier]=1000-player.getHealth();
+                }
+                context.assertTrue(taken[0]>taken[1] && taken[1]>taken[2],
+                    "Real damage must satisfy netherite > Adamantium > Uru for hit "+hit+"; actual="+java.util.Arrays.toString(taken));
+            }
+            context.succeed();
+        });
+    }
+
 }

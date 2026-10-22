@@ -17,8 +17,8 @@ public final class ScyerGear {
     public static final Map<String, Item> ITEMS = new LinkedHashMap<>();
     private static final ArmorType[] TYPES = {ArmorType.HELMET, ArmorType.CHESTPLATE, ArmorType.LEGGINGS, ArmorType.BOOTS};
     private static final EquipmentSlot[] SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
-    public static final Item[] ADAMANTIUM = armor("adamantium", 20);
-    public static final Item[] URU = armor("uru", 30);
+    public static final Item[] ADAMANTIUM = armor("adamantium", 4, Map.of(ArmorType.HELMET, 4, ArmorType.CHESTPLATE, 9, ArmorType.LEGGINGS, 7, ArmorType.BOOTS, 4), .15F);
+    public static final Item[] URU = armor("uru", 30, Map.of(ArmorType.HELMET, 5, ArmorType.CHESTPLATE, 12, ArmorType.LEGGINGS, 8, ArmorType.BOOTS, 5), .2F);
     private static final ToolMaterial URU_TOOLS = new ToolMaterial(BlockTags.INCORRECT_FOR_NETHERITE_TOOL, 4096, 18, 8, 30,
         ItemTags.REPAIRS_NETHERITE_ARMOR);
     public static final Item URU_PICKAXE = tool("uru_pickaxe", new Item.Properties().pickaxe(URU_TOOLS, 3, -2.8F));
@@ -50,11 +50,10 @@ public final class ScyerGear {
     private static Item tool(String name, Item.Properties properties) {
         return register(name, new Item(properties.fireResistant().setId(key(name))));
     }
-    private static Item[] armor(String name, float toughness) {
+    private static Item[] armor(String name, float toughness, Map<ArmorType, Integer> defense, float knockback) {
         var asset = ResourceKey.create(EquipmentAssets.ROOT_ID, Identifier.fromNamespaceAndPath("scyer", name));
-        var material = new ArmorMaterial(500, Map.of(ArmorType.HELMET, 5, ArmorType.CHESTPLATE, 12,
-            ArmorType.LEGGINGS, 8, ArmorType.BOOTS, 5), 30, SoundEvents.ARMOR_EQUIP_NETHERITE,
-            toughness, .2F, ItemTags.REPAIRS_NETHERITE_ARMOR, asset);
+        var material = new ArmorMaterial(500, defense, 30, SoundEvents.ARMOR_EQUIP_NETHERITE,
+            toughness, knockback, ItemTags.REPAIRS_NETHERITE_ARMOR, asset);
         Item[] result = new Item[4];
         String[] suffix = {"helmet", "chestplate", "leggings", "boots"};
         for (int i = 0; i < 4; i++) {
