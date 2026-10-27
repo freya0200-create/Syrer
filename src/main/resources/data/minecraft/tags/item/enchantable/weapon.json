@@ -1,8 +1,6 @@
 {
   "replace": false,
   "values": [
-    "scyer:uru_sword",
-    "scyer:uru_axe",
-    "scyer:uru_mace"
+    "acceleration:acceleration_spear"
   ]
 }

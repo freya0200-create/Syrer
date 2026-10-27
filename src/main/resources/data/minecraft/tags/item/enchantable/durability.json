@@ -1,17 +1,6 @@
 {
   "replace": false,
   "values": [
-    "scyer:adamantium_helmet",
-    "scyer:adamantium_chestplate",
-    "scyer:adamantium_leggings",
-    "scyer:adamantium_boots",
-    "scyer:uru_helmet",
-    "scyer:uru_chestplate",
-    "scyer:uru_leggings",
-    "scyer:uru_boots",
-    "scyer:uru_sword",
-    "scyer:uru_axe",
-    "scyer:uru_pickaxe",
-    "scyer:uru_mace"
+    "acceleration:acceleration_spear"
   ]
 }

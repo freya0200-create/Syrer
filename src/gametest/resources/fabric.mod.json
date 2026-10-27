@@ -1,9 +1,1 @@
-{
-  "schemaVersion": 1,
-  "id": "scyer_gametest",
-  "version": "1.0.0",
-  "name": "Scyer Integration Tests",
-  "environment": "server",
-  "entrypoints": { "fabric-gametest": ["dev.scyer.ScyerGameTests"] },
-  "depends": { "scyer": "*", "fabric-api": "*" }
-}
+{"schemaVersion":1,"id":"acceleration_gametest","version":"1.0.0","name":"Acceleration Integration Tests","environment":"server","entrypoints":{"fabric-gametest":["dev.acceleration.AccelerationGameTests"]},"depends":{"acceleration":"*","fabric-api":"*"}}

@@ -3,9 +3,9 @@ plugins {
     id 'maven-publish'
 }
 
-version = '1.6.3+mc26.2'
-group = 'dev.scyer'
-base { archivesName = 'scyer' }
+version = '1.0.0+mc26.2'
+group = 'dev.acceleration'
+base { archivesName = 'acceleration' }
 
 repositories { mavenCentral() }
 
@@ -19,16 +19,16 @@ sourceSets {
 loom {
     splitEnvironmentSourceSets()
     mods {
-        scyer {
+        acceleration {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }
-        scyer_gametest { sourceSet sourceSets.gametest }
+        acceleration_gametest { sourceSet sourceSets.gametest }
     }
     runs {
         gameTest {
             server()
-            name 'Scyer Game Tests'
+            name 'Acceleration Game Tests'
             source sourceSets.gametest
             runDir 'build/gametest'
             vmArg '-Dfabric-api.gametest'
@@ -57,4 +57,4 @@ java {
 tasks.withType(JavaCompile).configureEach { options.release = 25 }
 test { useJUnitPlatform() }
 
-jar { from("VISUAL_CREDITS.md") }
+jar { from("LICENSE") }

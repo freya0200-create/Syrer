@@ -1,87 +1,66 @@
-# Scyer
+# Acceleration Mod
 
-A Minecraft **Java Edition 26.2 / Fabric** horror boss mod, version **1.6.3**. Requires **Java 25**, **Fabric Loader 0.19.5+** and **Fabric API 0.161.0+26.2** (or a compatible newer Fabric API for 26.2).
+An original Minecraft **Java 26.2 / Fabric** implementation of the dragon-reward spear and soul ability described by the player. Requires **Java 25**, **Fabric Loader 0.19.5+**, and **Fabric API 0.161.0+26.2** or a compatible newer Fabric API for 26.2. Install on both the server and every client. It is a separate mod from Scyer; neither depends on the other.
 
-## Relentless tracking
+## Earn the Acceleration Spear
 
-Scyer acquires survival/adventure players on its first AI tick, within a spherical **100-block radius**. Its supernatural tracker detects silent, motionless and crouched targets through walls, with no visible radar added to its eyes. Players always take priority over mobs, including mobs that hit it. When no eligible player is nearby, it hunts the nearest living creature, including undead, or retaliates against a nearby attacker. Creative/spectator players, invulnerable entities and other Scyers are exempt.
+Defeat the actual Ender Dragon managed by the End's dragon fight. After the death animation creates the exit portal and first dragon egg, a single **Acceleration Spear** drops directly above the egg. Respawned dragon victories also give one spear, above the exit fountain if the egg is absent. Unrelated summoned dragons do not count. A persistent dragon-UUID ledger prevents the same victory awarding duplicate spears. The dropped reward does not despawn on a timer and resists damage until collected.
 
-It moves quickly, recalculates its path every five ticks, and strikes every ten ticks at close range. A hit still requires a clear line to its victim and a reachable path: it does not teleport or tunnel through walls. Roaring never pauses pursuit or delays the first strike. Crouching, rain, food and competing noises no longer make it passive. Actual server sounds still attract investigation when no living target is found.
+The weapon has native netherite-spear jab, joust, reach, durability, animations and model behavior. It is blessed with every supported beneficial spear enchantment at maximum level, including conflicting damage enchantments, plus **Piercing IV** explicitly. Curses are excluded. Lunge III is included. Piercing is normally a projectile enchantment; this weapon's custom soul strike supplies actual armor/shield penetration. Item model definitions reference Minecraft's built-in assets; no third-party models/textures are redistributed.
 
-The pale body, empty eye sockets, hanging jaw and long claws retain the original scary appearance. All four levels are **four blocks tall**, need suitable headroom, resist knockback, and are immune to fire. No villager or potion particles are emitted. Roar retains its sonic effect and immobilizes survival/adventure players within ten blocks for 2.5 seconds, with a twenty-second cooldown. Normal shields, totems, Resistance, absorption and invulnerability mechanics remain.
+## Acceleration from your inventory
 
-## Four levels
+Keep the spear anywhere in your inventory, including an ordinary inventory slot or offhand. You do not need to hold it. Sprinting charges acceleration over **five seconds**, up to **four times your otherwise normal sprint movement speed**. Stopping fades the bonus over 1.25 seconds; removing the last spear clears it immediately. Extra spears do not stack extra multipliers. The effect changes the real movement attribute rather than repeatedly giving a Speed potion.
 
-| Level | Health | Raw attack damage | Equipment |
-| --- | --- | --- | --- |
-| 1 | 1,000 HP | 10 HP claw / 27 HP smash | Bare claws |
-| 2 | 1,008 HP | 10 HP claw / 27 HP smash | Adamantium armor |
-| 3 | 1,016 HP | 10 HP claw / 27 HP smash | Uru (우르 금속) armor |
-| 4 | 1,024 HP | 10 HP claw / 27 HP smash | Uru armor and miniature sword, axe, mace, pickaxe, spear, trident, bow and crossbow in its hands |
+## Lunge into soul mode
 
-Scyer alternates a **Sharpness III netherite-sword-equivalent claw hit (10 HP raw)** and a **six-block Density I mace-equivalent smash (27 HP raw)**. The smash has Breach I's vanilla armor-reduction effect. Density and Breach are normally mutually exclusive player enchantments; this is a monster-specific combined attack, not a craftable combined-enchantment mace. Strength V and armor/Protection-bypassing attacks have been removed. Armor, Protection, shields and totems work normally. The miniature weapons remain visual rather than separately fired projectiles.
+1. Hold the spear and **left-click to jab/lunge**. Native Lunge requires at least seven food points, being out of water, not riding and not gliding.
+2. Your body stays at the **exact position where you began the lunge**, wearing copies of your equipment and using your player skin. It does not follow the soul.
+3. You control the flying soul for up to **10 seconds**. Soul flight uses Minecraft's spectator movement, with blue soul particles and an on-screen status message. The hand/spear is not rendered during spectator projection.
+4. Aim at a living target within **64 blocks** and **left- or right-click**. The server chooses the target from your actual aim, materializes you beside them, then applies one lethal spear strike. A normal held Totem of Undying activates; without one, ordinary targets die even through armor, Protection, Resistance and shields.
+5. **Sneak/Shift** returns to your body without attacking. Timeout, moving more than **128 blocks** from your body or losing the spear also returns you safely.
 
-**Fifty-smash balance:** all four levels survive 49 fully charged Density V mace smashes with **six blocks of actual fall distance before impact**, then die on hit 50, from full health without extra healing or defenses. Native six-block Density V smash damage is 39 HP; incoming density-smash damage is normalized after armor to this reference. Other Density levels, fall heights, partial charges and Breach change the result. A six-block platform does not always mean six blocks of fall before you hit a four-block-tall creature. The old per-hit sword/mace/explosion caps and stage resilience multipliers are gone; ordinary attacks and explosions use normal damage and armor rules. Breach still increases damage against boss armor and wearable armor.
+A successful strike commits your real position beside the target rather than returning you to the old body. Ending projection removes the body, restores your previous game mode and flight/invulnerability settings, and starts a **30-second soul cooldown**. Normal spear attacks/lunges remain usable while the soul ability is cooling down. A single projection can deliver only one soul strike, preventing a repeated packet from consuming multiple totems.
 
-Regeneration II resumes after five seconds without taking damage. Sustained attacks pause it, so healing does not cancel the fifty-hit target. The roar's movement/action lock now lasts exactly **50 ticks / 2.5 seconds**, with the existing ten-block radius and twenty-second cooldown.
+The body can be damaged: a hit immediately recalls its owner and applies the incoming damage to their real health/armor exactly once. Equipment on the temporary body is never dropped or duplicated. Creative/spectator targets, invulnerable entities and your own body are excluded from soul strikes. Disabled PvP and team friendly-fire restrictions are respected. The soul can pass through walls and its aimed strike is not limited by intervening blocks, but it must find an empty, in-bounds landing space beside the victim. Special damage immunities supplied by other mods may still prevent a kill.
 
-Full-set protection is ordered **netherite < Adamantium < Uru**: armor points are **20 / 24 / 30**, effective toughness is **12 / 16 / 20** (Minecraft caps toughness at 20), and knockback resistance is **0.4 / 0.6 / 0.8**. Adamantium is reduced from the previous Uru-like protection; Uru retains its existing strength. Both custom sets keep 5,000 maximum durability and drop with 20–50 remaining.
+Logout and normal server shutdown recall projected players. The return position, original game mode and abilities are also stored for recovery on reconnect after an interrupted save/session. Orphaned saved body mannequins are removed when their chunks load. Do not change game modes manually during projection; use the return control or command.
 
-## Death upgrades and loot
+## Commands
 
-Only **one Scyer may exist across the entire server**, including unloaded chunks and other dimensions. All four entity types, natural spawns, commands, eggs and stalking spawns share that slot. A death advances the world's next natural/stalking level, capped at four. Progression and each entity's level are saved across restarts; unloading or discarding an entity does not count as a death. The slot releases when its death animation finishes/removal occurs. Creative-mode eggs replace the previous Scyer, including an unloaded one, with exactly one new creature of the selected level. This replacement gives no loot and does not advance evolution. Survival-mode eggs preserve the cap and print a clear message when blocked.
-
-In the Overworld, stalking attempts run every thirty seconds on supported, loaded, dry terrain 52–64 horizontal blocks from an eligible player, at least fifty blocks from every player. They need four-block clearance and use temporary simulation tickets. Peaceful and disabled mob spawning prevent automatic spawns. Natural biome spawns retain normal darkness rules.
-
-- Level 1: no armor drops.
-- Level 2: a full Adamantium armor set.
-- Levels 3 and 4: a full Uru armor set.
-- Each armor piece has **5,000 maximum durability**. Dropped pieces are damaged so only **20–50 durability remains**; repair can restore them up to the full 5,000.
-- Level 4 independently rolls **50% Uru pickaxe**, **10% Uru sword**, **4% Uru mace** and **35% Uru axe**. Several weapons can drop together, or none. Looting does not change these percentages.
-
-The tools are functional equipment with 4,096 durability: the pickaxe mines at netherite harvest level, the axe can strip/scrape, the sword attacks normally, and the mace retains real smash behavior and accepts vanilla mace enchantments. Armor and weapons appear in the relevant creative tabs. Ordinary mob-loot gamerules apply.
-
-## Install and spawn
-
-Get the one-click JAR download from [GitHub Releases](https://github.com/freya0200-create/Syrer/releases/latest).
-
-Replace your older Syrer/Scyer mod JAR with `build/libs/scyer-1.6.3+mc26.2.jar` in the instance's `mods` folder. Keep Fabric API installed. Install the same versions on client and server. Old `syrer` namespaces are not migrated. Existing `scyer` entities are upgraded on load; use a fresh creature to compare the levels.
-
-The Spawn Eggs tab contains **Level 1 Scyer Spawn Egg** through **Level 4 Scyer Spawn Egg**:
+With cheats/operator permissions:
 
 ```mcfunction
-/give @s scyer:scyer_spawn_egg
-/give @s scyer:scyer_level_2_spawn_egg
-/give @s scyer:scyer_level_3_spawn_egg
-/give @s scyer:scyer_level_4_spawn_egg
-/summon scyer:scyer_level_4 ~ ~ ~6
+/acceleration give
+/acceleration soul
 ```
 
-The base entity remains `scyer:scyer`; other types are `scyer:scyer_level_2`, `scyer:scyer_level_3`, and `scyer:scyer_level_4`. An evolved natural spawn can use the base entity type while its saved level, displayed name and appearance are higher. To clear the existing creature for testing any egg, use `/kill @e[type=#scyer:scyers]` in its dimension, then wait for its death animation to finish. The cap includes other dimensions. Version 1.6.1 adds operator recovery commands that also work when the old creature is unloaded or its slot is stale:
+`give` grants a fully enchanted spear for testing. `soul` activates projection from your current position while holding the spear and obeys the normal cooldown. Players can always recall their own active soul:
 
 ```mcfunction
-/scyer status
-/scyer reset
-/scyer spawn 1
-/scyer spawn 4
+/acceleration return
 ```
 
-`status` reports the occupied slot, difficulty, and loaded creature locations. `reset` discards loaded creatures in all dimensions and persistently retires old UUIDs, clearing inaccessible slots without loot or evolution. `spawn <1-4>` validates open dry ground first, then replaces the previous creature and spawns the requested level nearby. Failed space/difficulty checks preserve the old creature. The commands require cheats/operator permissions; run `/difficulty normal` first if the world is Peaceful. Eggs also explain Peaceful difficulty and insufficient headroom in chat. Version 1.6.0 population saves are migrated automatically; reset history prevents a replaced creature from returning when its old chunk loads.
+The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and Creative-tab spears acquire their blessing on their first server inventory tick. There is no crafting recipe.
 
-## Develop and validate
+## Install
 
-Cloud tasks use the existing `/workspace/Syrer` checkout; do not create a Git worktree unless requested. Source `/workspace/scyer-env.sh` for Java 25 and the retained Gradle cache. `/workspace/scyer-install.sh` recreates tool activation and runs the checks. The GitHub repository itself has not been renamed.
+Place `acceleration-1.0.0+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+
+## Development and validation
+
+Use `/workspace/Acceleration`; do not alter `/workspace/Syrer` when developing this separate mod. Cloud tasks are already isolated; do not create a Git worktree unless explicitly requested. Source `/workspace/scyer-env.sh` (or `/workspace/acceleration-env.sh`) for the retained Java 25 toolchain and Gradle cache. The Gradle wrapper pins 9.7.1 with checksum verification, Loom 1.18.4 and the listed Minecraft/Fabric dependencies.
 
 ```sh
 ./gradlew build
 ./gradlew test
 ./gradlew runGameTest
-./gradlew runClient  # Graphical desktop required
-./gradlew runServer  # Review Minecraft's EULA before accepting run/eula.txt
+./gradlew runClient # Requires a graphical desktop
+./gradlew runServer # Review Minecraft's EULA before accepting run/eula.txt
 ```
 
-Use `gradlew.bat` on Windows. The wrapper pins Gradle 9.7.1 with its checksum; Loom is 1.18.4. Generated model sources and texture assets are checked in. Optional regeneration uses `python tools/generate_scyer_model.py` and `python tools/generate_gear_assets.py` (the latter requires Pillow).
+Three rules tests validate ramp, decay, limits and time/range constants. Twelve actual server GameTests exercise native spear components and max enchantments; acceleration from an ordinary inventory slot; the actual native lunge hook and exact body anchor/skin profile; server-aimed teleport strike consuming exactly one totem; lethal hits through real Protection IV netherite; one-time body damage forwarding; timeout and mode/ability restoration; range/missing-spear recall; reward position and persistence; serialized recovery; creative/PvP protections; and the real `EnderDragonFight.setDragonKilled` callback after portal/egg generation. Minecraft's built-in always-pass case also runs. Tests use real ServerPlayer instances rather than mocks with fixed game-mode overrides. The test mod is not bundled in the release.
 
-The suite has three balance tests and twenty Scyer server GameTests (plus Minecraft's built-in always-pass case). It checks immediate player-first attacks and mob fallback; through-wall/100-block tracking; all four egg levels and walking; every level surviving 49 native six-block Density V smashes and dying on hit 50; the new sword/mace attack strengths and real armor/Protection reductions; ordinary explosion damage; Breach; actual death drops and fragile durability; independent loot rolls; saved evolution and entity levels; distant spawning; the population cap; precisely 2.5 seconds of immobilization; and regeneration cooldown. Regression tests exercise actual Creative egg clicks replacing all four levels, actual reset/spawn/vanilla-summon commands, old-format save migration, ghost-slot recovery, permanent rejection of retired unloaded creatures, and safe failure in Peaceful or without room. Tests keep the real cap enabled and are excluded from the release JAR.
+Both server and client sources compile. Client input-hook target signatures and resource references are checked, but graphical controls, skin rendering, first-person camera behavior and Mac gameplay still require manual testing. A full multiplayer play session has not been run here.
 
-Headless model checks verify all four variants, armor/weapon visibility, jaw/claw animations and pose resets. Actual appearance, sounds, item rendering and movement on complex terrain still need graphical Minecraft testing. Visual credits and license terms are in [VISUAL_CREDITS.md](VISUAL_CREDITS.md).
+This is an original implementation inspired by the requested description, not an official ManePear/Interval SMP release. No video assets or third-party source code are included. See LICENSE.
