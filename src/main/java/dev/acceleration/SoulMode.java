@@ -15,6 +15,7 @@ import net.minecraft.world.level.*;
 import net.minecraft.world.phys.*;
 
 public final class SoulMode {
+    public static final float STRIKE_DAMAGE=Float.MAX_VALUE;
     public static final String BODY_TAG="acceleration_soul_body";
     public static final ResourceKey<DamageType> STRIKE=ResourceKey.create(Registries.DAMAGE_TYPE,AccelerationMod.id("soul_strike"));
     private record LungeReturn(Vec3 start,Vec3 last,int still,int ticks){}
@@ -131,16 +132,14 @@ public final class SoulMode {
                 &&source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK))finishFromHit(owner,null);
         return hit;
     }
-    private static boolean eligible(ServerPlayer player,LivingEntity victim){
+    private static boolean eligible(ServerPlayer player,Entity victim){
         if(victim==player||!victim.isAlive()||victim.isInvulnerable()||victim.entityTags().contains(BODY_TAG)||victim.level()!=player.level())return false;
         return !(victim instanceof Player target)||(!target.isCreative()&&!target.isSpectator()&&player.level().getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP)&&player.canHarmPlayer(target));
     }
     public static boolean strike(ServerPlayer player,Entity clicked){
         if(active(player)&&ownBody(player,clicked)&&player.getMainHandItem().is(AccelerationMod.SPEAR)
                 &&player.isWithinEntityInteractionRange(clicked,0))return finish(player,null);
-        LivingEntity victim=clicked instanceof LivingEntity living?living:
-            clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:null;
-        if(victim==null)return false;
+        Entity victim=clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:clicked;
         if(!active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
                 ||!player.isWithinEntityInteractionRange(clicked,0))return false;
         ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
@@ -149,7 +148,9 @@ public final class SoulMode {
         finish(player,destination);
         DamageSource source=new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(STRIKE),player);
         victim.invulnerableTime=0;
-        float lethal=(float)Math.min(Float.MAX_VALUE,Math.max(1_000_000D,(double)victim.getHealth()+victim.getAbsorptionAmount()+1));
+        // Largest finite damage gives the requested effectively infinite strike without NaN health.
+        float lethal=STRIKE_DAMAGE;
+        if(victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss wither)wither.setInvulnerableTicks(0);
         boolean hit=victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
             dragon.hurt(world,dragon.head,source,lethal):victim.hurtServer(world,source,lethal);
         world.playSound(null,player.getX(),player.getY(),player.getZ(),SoundEvents.PLAYER_ATTACK_CRIT,SoundSource.PLAYERS,1,1);

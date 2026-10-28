@@ -429,4 +429,23 @@ public final class AccelerationGameTests {
     }
 
 
+    private static final class StrikeStand extends net.minecraft.world.entity.decoration.ArmorStand {
+        float received;
+        StrikeStand(ServerLevel world){super(EntityTypes.ARMOR_STAND,world);}
+        @Override public boolean hurtServer(ServerLevel world,net.minecraft.world.damagesource.DamageSource source,float amount){received=amount;return super.hurtServer(world,source,amount);}
+    }
+    @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:maximum_damage_strikes_damageable_entities_and_bosses")
+    public void maximumDamageStrikesDamageableEntitiesAndBosses(GameTestHelper c){
+        setup(c);var owner=player(c);
+        c.runAtTickTime(5,()->{
+            var stand=new StrikeStand(c.getLevel());stand.setPos(owner.position().add(2,0,0));c.getLevel().addFreshEntity(stand);
+            SoulMode.begin(owner,owner.position());
+            c.assertTrue(SoulMode.strike(owner,stand)&&stand.isRemoved()&&stand.received==Float.MAX_VALUE,"Stand strike must receive maximum finite damage and destroy it immediately");
+            var cart=c.spawn(EntityTypes.MINECART,new BlockPos(6,2,6));owner.setPos(cart.position().add(2,0,0));SoulMode.begin(owner,owner.position());
+            c.assertTrue(SoulMode.strike(owner,cart)&&cart.isRemoved()&&!SoulMode.active(owner),"Right-click strike must destroy a damageable non-living minecart and materialize its attacker");
+            var wither=c.spawn(EntityTypes.WITHER,new BlockPos(10,2,10));wither.setInvulnerableTicks(200);owner.setPos(wither.position().add(2,0,0));SoulMode.begin(owner,owner.position());
+            c.assertTrue(SoulMode.strike(owner,wither)&&wither.isDeadOrDying(),"The strike must kill even a Wither during its spawn protection");c.succeed();
+        });
+    }
+
 }
