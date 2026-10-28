@@ -13,7 +13,7 @@ public final class AccelerationClient implements ClientModInitializer {
             while(momentumKey.consumeClick()){
                 if(client.player!=null&&client.level!=null&&client.gui.screen()==null&&client.gui.overlay()==null
                         &&ClientPlayNetworking.canSend(SoulPackets.Action.TYPE))
-                    ClientPlayNetworking.send(new SoulPackets.Action(SoulPackets.ACTIVATE_MOMENTUM));
+                    ClientPlayNetworking.send(new SoulPackets.Action(SoulPackets.TOGGLE_ACCELERATION));
             }
         });
         PlayerBody.CLIENT_FACTORY=ClientPlayerBody::new;

@@ -11,7 +11,7 @@ public final class ProjectionActions {
             return InteractionResult.PASS;
         });
         UseBlockCallback.EVENT.register((player,world,hand,hit)->{
-            if(player instanceof ServerPlayer actor&&SoulMode.active(actor)&&!player.getItemInHand(hand).has(DataComponents.FOOD)&&!player.getItemInHand(hand).is(Items.ENDER_PEARL)&&!player.getItemInHand(hand).is(Items.WIND_CHARGE))SoulMode.finish(actor,actor.position());
+            if(player instanceof ServerPlayer actor&&SoulMode.active(actor)&&!player.getItemInHand(hand).is(AccelerationMod.SPEAR)&&!player.getItemInHand(hand).has(DataComponents.FOOD)&&!player.getItemInHand(hand).is(Items.ENDER_PEARL)&&!player.getItemInHand(hand).is(Items.WIND_CHARGE))SoulMode.finish(actor,actor.position());
             return InteractionResult.PASS;
         });
         UseItemCallback.EVENT.register((player,world,hand)->{

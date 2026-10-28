@@ -62,7 +62,7 @@ public final class AccelerationGameTests {
     public void inventoryAccelerationWorksWithoutHoldingSpear(GameTestHelper c){
         setup(c);var p=player(c);p.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);p.getInventory().setItem(20,AccelerationSpear.create(c.getLevel()));
         p.setSprinting(false);AccelerationMod.accelerationTick(p);double base=p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
-        p.setSprinting(true);for(int i=0;i<100;i++)AccelerationMod.accelerationTick(p);
+        AccelerationMod.toggleAcceleration(p);p.setSprinting(true);for(int i=0;i<100;i++)AccelerationMod.accelerationTick(p);
         c.assertTrue(AccelerationMod.charge(p)==100,"A spear in an ordinary inventory slot must charge acceleration");
         double charged=p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
         c.assertTrue(Math.abs(charged-base*1.3*1.60)<1e-6,"Five seconds of sprinting must give a 60-percent acceleration bonus on top of native sprint speed");
@@ -418,21 +418,25 @@ public final class AccelerationGameTests {
     }
     @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:normal_spear_hit_recall_does_not_restart_projection")
     public void normalSpearHitRecallDoesNotRestartProjection(GameTestHelper c){
-        setup(c);var owner=player(c);var target=player(c);
+        setup(c);var owner=player(c);var target=player(c);Vec3 anchor=owner.position();Vec3 strikePosition=anchor.add(8,0,0),endpoint=strikePosition.add(0,0,3);
         c.runAtTickTime(10,()->{
-            Vec3 anchor=owner.position();SoulMode.begin(owner,anchor);var body=body(c,owner);
-            Vec3 strikePosition=anchor.add(8,0,0);owner.setPos(strikePosition);target.setPos(strikePosition.add(0,0,2));owner.setYRot(0);owner.setXRot(0);
+            SoulMode.begin(owner,anchor);owner.setPos(strikePosition);target.setPos(strikePosition.add(0,0,2));owner.setYRot(0);owner.setXRot(0);
             owner.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(owner,EquipmentSlot.MAINHAND);
-            c.assertTrue(target.getHealth()<20&&!SoulMode.active(owner)&&body.isRemoved(),"A real native spear jab must reunite on a hit and its post-hit Lunge must not create another ghost in the same action");
-            c.assertTrue(owner.position().distanceToSqr(strikePosition)<1e-8,"Normal spear hit must bring the body to the current strike position");c.succeed();
+            c.assertTrue(target.getHealth()<20&&SoulMode.active(owner),"A native spear jab must hit first and keep the body behind while the lunge moves forward");
+        });
+        c.runAtTickTime(12,()->{owner.setPos(endpoint);owner.setDeltaMovement(new Vec3(0,0,.4));});
+        c.runAtTickTime(20,()->{
+            c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(endpoint)<1e-8,"A lunge that hits must still reunite at its actual forward endpoint, not teleport before movement");
+            c.assertTrue(owner.getDeltaMovement().z==.4,"Post-hit lunge reunion must preserve forward momentum");c.succeed();
         });
     }
 
 
+
     private static final class StrikeStand extends net.minecraft.world.entity.decoration.ArmorStand {
-        float received;
+        float received;Vec3 attackerAtDamage;boolean projectedAtDamage;
         StrikeStand(ServerLevel world){super(EntityTypes.ARMOR_STAND,world);}
-        @Override public boolean hurtServer(ServerLevel world,net.minecraft.world.damagesource.DamageSource source,float amount){received=amount;return super.hurtServer(world,source,amount);}
+        @Override public boolean hurtServer(ServerLevel world,net.minecraft.world.damagesource.DamageSource source,float amount){received=amount;if(source.getEntity() instanceof ServerPlayer actor){attackerAtDamage=actor.position();projectedAtDamage=SoulMode.active(actor);}return super.hurtServer(world,source,amount);}
     }
     @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:maximum_damage_strikes_damageable_entities_and_bosses")
     public void maximumDamageStrikesDamageableEntitiesAndBosses(GameTestHelper c){
@@ -449,21 +453,20 @@ public final class AccelerationGameTests {
     }
 
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:key_activation_validates_spear_and_does_not_toggle_or_queue_lunge")
-    public void keyActivationValidatesSpearAndDoesNotToggleOrQueueLunge(GameTestHelper c){
-        setup(c);var owner=player(c);Vec3 anchor=owner.position();
-        owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.WIND_CHARGE));
-        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM)&&SoulMode.active(owner),"I-key server action must activate with the spear in an ordinary inventory slot");
-        var first=body(c,owner);c.assertTrue(first.position().distanceToSqr(anchor)<1e-8&&!owner.getAbilities().flying&&owner.gameMode()==GameType.SURVIVAL,"Key activation must keep an exact body anchor and normal Survival abilities");
-        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM)&&body(c,owner)==first,"Repeated key presses must not toggle off or create extra bodies");
-        for(int i=0;i<25;i++)SoulMode.tick(owner);
-        c.assertTrue(SoulMode.active(owner)&&!first.isRemoved(),"Key repeats must not queue a delayed lunge recall");
-        SoulMode.finish(owner,owner.position());owner.getInventory().setItem(20,ItemStack.EMPTY);
-        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM)&&!SoulMode.active(owner),"Forged activation without a spear must be rejected");
-        owner.getInventory().setItem(20,AccelerationSpear.create(c.getLevel()));owner.setGameMode(GameType.SPECTATOR);
-        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM),"Spectator activation must be rejected");
-        owner.setGameMode(GameType.SURVIVAL);owner.startRiding(c.spawn(EntityTypes.MINECART,new BlockPos(4,2,4)),true,true);
-        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM),"Activation while riding must be rejected");owner.stopRiding();
-        c.assertTrue(!SoulPackets.handleAction(owner,999),"Unknown action packets must be ignored");c.succeed();
+    public void keyTogglesAccelerationWithoutChangingGhostState(GameTestHelper c){
+        setup(c);var owner=player(c);owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.WIND_CHARGE));
+        owner.setSprinting(true);AccelerationMod.accelerationTick(owner);
+        c.assertTrue(AccelerationMod.charge(owner)==0&&!SoulMode.active(owner),"Acceleration must wait for the I key and never start ghost mode");
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.TOGGLE_ACCELERATION)&&AccelerationMod.accelerationEnabled(owner)&&!SoulMode.active(owner),"I must enable the speed boost with spear in inventory without activating ghost mode");
+        for(int i=0;i<100;i++)AccelerationMod.accelerationTick(owner);
+        c.assertTrue(AccelerationMod.charge(owner)==100,"Enabled sprinting must build acceleration");
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.TOGGLE_ACCELERATION)&&!AccelerationMod.accelerationEnabled(owner)&&AccelerationMod.charge(owner)==0,"I again must immediately disable and clear acceleration");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));SoulMode.begin(owner,owner.position());var body=body(c,owner);
+        SoulPackets.handleAction(owner,SoulPackets.TOGGLE_ACCELERATION);SoulPackets.handleAction(owner,SoulPackets.TOGGLE_ACCELERATION);
+        c.assertTrue(SoulMode.active(owner)&&!body.isRemoved(),"I must only toggle speed, never toggle ghost mode or queue recall");SoulMode.finish(owner,owner.position());
+        owner.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);owner.getInventory().setItem(20,ItemStack.EMPTY);
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.TOGGLE_ACCELERATION),"Activation without the spear must be rejected");
+        c.assertTrue(!SoulPackets.handleAction(owner,999),"Unknown action must be ignored");c.succeed();
     }
 
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:right_click_joust_always_uses_maximum_ghost_damage")
@@ -481,5 +484,92 @@ public final class AccelerationGameTests {
             c.assertTrue(target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner),"A native right-click ghost joust must pop exactly one totem and reunite the body: health="+target.getHealth()+", totem="+target.getOffhandItem()+", projected="+SoulMode.active(owner));owner.stopUsingItem();c.succeed();
         });
     }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:hit_precedes_teleport_and_spear_use_does_not_recall_early")
+    public void hitPrecedesTeleportAndSpearUseDoesNotRecallEarly(GameTestHelper c){
+        setup(c);var owner=player(c);var origin=owner.position();var stand=new StrikeStand(c.getLevel());stand.setPos(origin.add(2,0,0));c.getLevel().addFreshEntity(stand);
+        SoulMode.begin(owner,origin);
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,new BlockHitResult(origin,Direction.UP,owner.blockPosition().below(),false));
+        c.assertTrue(SoulMode.active(owner),"Right-clicking the spear while looking at a block must not recall before a hit");
+        c.assertTrue(SoulMode.strike(owner,stand)&&stand.projectedAtDamage&&stand.attackerAtDamage.distanceToSqr(origin)<1e-8,"The damage receiver must observe the attacker still projected at the pre-teleport position");
+        c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)>.1,"Teleport and reunion must only happen after the successful hit");c.succeed();
+    }
+    @GameTest(maxTicks=80,padding=64,environment="acceleration_gametest:first_dragon_normal_return_dragon_upgraded_without_duplicates")
+    public void firstDragonNormalReturnDragonUpgradedWithoutDuplicates(GameTestHelper c){
+        setup(c);var exit=c.absolutePos(new BlockPos(7,2,7));
+        var first=new net.minecraft.world.level.dimension.end.EnderDragonFight(false,false,false,Optional.empty(),0,Optional.empty(),Optional.of(exit),List.of(0),List.of());first.init(c.getLevel(),12,exit);
+        var normal=((dev.acceleration.mixin.DragonFightAccess)first).acceleration$create();
+        c.assertTrue(normal.getMaxHealth()==200&&!AscendedDragon.upgraded(normal),"The native first fight must remain the normal 200-HP dragon");normal.discard();
+        var second=new net.minecraft.world.level.dimension.end.EnderDragonFight(false,true,true,Optional.empty(),0,Optional.empty(),Optional.of(exit),List.of(0),List.of());second.init(c.getLevel(),13,exit);
+        var boss=AscendedDragon.spawnOnReturn(c.getLevel(),second);
+        c.assertTrue(boss!=null&&AscendedDragon.upgraded(boss)&&boss.getHealth()==1000&&boss.getMaxHealth()==1000&&second.dragonUUID().equals(boss.getUUID()),"A return after the first defeat must create and track the upgraded 1000-HP dragon");
+        c.assertTrue(AscendedDragon.spawnOnReturn(c.getLevel(),second)==null,"Another returning player must not create a duplicate boss");
+        boss.setHealth(750);AscendedDragon.upgrade(boss);c.assertTrue(boss.getHealth()==750,"Reloading or reapplying upgrade must not heal the boss");c.succeed();
+    }
+    private static final Map<UUID,List<Long>> SHOT_TIMES=new HashMap<>();
+    private static boolean shotObserver;
+    @GameTest(maxTicks=70,padding=64,environment="acceleration_gametest:upgraded_dragon_fires_exactly_three_sequential_shots")
+    public void upgradedDragonFiresExactlyThreeSequentialShots(GameTestHelper c){
+        setup(c);AscendedDragon.clear();
+        if(!shotObserver){shotObserver=true;net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((entity,world)->{
+            if(entity instanceof net.minecraft.world.entity.projectile.hurtingprojectile.DragonFireball ball&&ball.getOwner() instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon&&SHOT_TIMES.containsKey(dragon.getUUID()))SHOT_TIMES.get(dragon.getUUID()).add(world.getGameTime());
+        });}
+        var boss=EntityTypes.ENDER_DRAGON.create(c.getLevel(),EntitySpawnReason.COMMAND);boss.setPos(Vec3.atBottomCenterOf(c.absolutePos(new BlockPos(7,10,7))));boss.head.setPos(boss.position());boss.setNoAi(true);AscendedDragon.upgrade(boss);c.getLevel().addFreshEntity(boss);SHOT_TIMES.put(boss.getUUID(),new ArrayList<>());
+        var normal=EntityTypes.ENDER_DRAGON.create(c.getLevel(),EntitySpawnReason.COMMAND);normal.setPos(boss.position().add(20,0,0));normal.setNoAi(true);c.getLevel().addFreshEntity(normal);SHOT_TIMES.put(normal.getUUID(),new ArrayList<>());
+        c.runAtTickTime(5,()->{
+            var shot=new net.minecraft.world.entity.projectile.hurtingprojectile.DragonFireball(c.getLevel(),boss,new Vec3(0,0,1));shot.setPos(boss.position());c.getLevel().addFreshEntity(shot);
+            var ordinary=new net.minecraft.world.entity.projectile.hurtingprojectile.DragonFireball(c.getLevel(),normal,new Vec3(0,0,1));ordinary.setPos(normal.position());c.getLevel().addFreshEntity(ordinary);
+        });
+        c.runAtTickTime(14,()->c.assertTrue(SHOT_TIMES.get(boss.getUUID()).size()==1,"Volley must begin with a single shot, not spawn three simultaneously"));
+        c.runAtTickTime(16,()->c.assertTrue(SHOT_TIMES.get(boss.getUUID()).size()==2,"Second fireball must follow after ten ticks"));
+        c.runAtTickTime(40,()->{var times=SHOT_TIMES.remove(boss.getUUID());var ordinary=SHOT_TIMES.remove(normal.getUUID());
+            c.assertTrue(times.size()==3&&times.get(1)-times.get(0)>=10&&times.get(2)-times.get(1)>=10,"One upgraded dragon shot must produce exactly three sequential fireballs without recursive volleys");
+            c.assertTrue(ordinary.size()==1,"The first-fight dragon must retain its normal single shot");c.succeed();});
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:every_spear_material_has_free_lunges")
+    public void everySpearMaterialHasFreeLunges(GameTestHelper c){
+        setup(c);var owner=player(c);var food=owner.getFoodData();var lunge=c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.LUNGE);
+        for(var item:new Item[]{Items.WOODEN_SPEAR,Items.STONE_SPEAR,Items.COPPER_SPEAR,Items.IRON_SPEAR,Items.GOLDEN_SPEAR,Items.DIAMOND_SPEAR,Items.NETHERITE_SPEAR}){
+            var stack=new ItemStack(item);stack.enchant(lunge,3);owner.setItemSlot(EquipmentSlot.MAINHAND,stack);food.setFoodLevel(10);food.setSaturation(5);
+            for(int i=0;i<3;i++){stack.get(DataComponents.PIERCING_WEAPON).attack(owner,EquipmentSlot.MAINHAND);food.tick(owner);}
+            c.assertTrue(food.getFoodLevel()==10&&food.getSaturationLevel()==5,"All spear materials must have zero lunge exhaustion: "+item);
+            var victim=c.spawn(EntityTypes.COW,new BlockPos(3,2,3));victim.setPos(owner.position().add(0,0,3.5));float health=victim.getHealth();
+            for(int i=0;i<50;i++){victim.invulnerableTime=0;owner.stabAttack(EquipmentSlot.MAINHAND,victim,.01F,true,false,false);food.tick(owner);}
+            c.assertTrue(victim.getHealth()<health&&food.getFoodLevel()==10&&food.getSaturationLevel()==5,"Successful combat stabs must also cost no exhaustion for every spear material: "+item);victim.discard();
+        }
+        owner.causeFoodExhaustion(5);food.tick(owner);c.assertTrue(food.getSaturationLevel()==4,"Normal sprint/damage hunger outside spear actions must remain vanilla");c.succeed();
+    }
+
+    @GameTest(maxTicks=80,padding=64,environment="acceleration_gametest:actual_end_reentry_spawns_one_upgraded_fight")
+    public void actualEndReentrySpawnsOneUpgradedFight(GameTestHelper c){
+        setup(c);AscendedDragon.clear();var owner=player(c);Vec3 original=owner.position();var end=c.getLevel().getServer().getLevel(Level.END);var saved=end.getDragonFight();
+        var completed=new net.minecraft.world.level.dimension.end.EnderDragonFight(false,true,true,Optional.empty(),0,Optional.empty(),Optional.of(new BlockPos(0,64,0)),List.of(0),List.of());completed.init(end,21,BlockPos.ZERO);
+        var first=new net.minecraft.world.level.dimension.end.EnderDragonFight(false,false,false,Optional.empty(),0,Optional.empty(),Optional.of(new BlockPos(0,64,0)),List.of(0),List.of());first.init(end,20,BlockPos.ZERO);end.setDragonFight(first);
+        AscendedDragon.observeDimension(owner);
+        c.runAtTickTime(5,()->{
+            owner.teleportTo(end,10,80,10,Set.of(),0,0,true);owner.connection.handleAcceptPlayerLoad(new net.minecraft.network.protocol.game.ServerboundPlayerLoadedPacket());AscendedDragon.observeDimension(owner);
+            c.assertTrue(end.getDragons().stream().noneMatch(AscendedDragon::upgraded),"Entering before the first defeat must not start an upgraded encounter");
+        });
+        c.runAtTickTime(10,()->{
+            owner.teleportTo(c.getLevel(),original.x,original.y,original.z,Set.of(),0,0,true);owner.connection.handleAcceptPlayerLoad(new net.minecraft.network.protocol.game.ServerboundPlayerLoadedPacket());AscendedDragon.observeDimension(owner);
+            end.getDragons().forEach(Entity::discard);end.setDragonFight(completed);
+        });
+        c.runAtTickTime(15,()->{
+            owner.teleportTo(end,10,80,10,Set.of(),0,0,true);owner.connection.handleAcceptPlayerLoad(new net.minecraft.network.protocol.game.ServerboundPlayerLoadedPacket());AscendedDragon.observeDimension(owner);
+            c.assertTrue(completed.dragonUUID()!=null&&!((dev.acceleration.mixin.DragonFightAccess)completed).acceleration$isKilled(),"End reentry after the first defeat must initiate a tracked new fight");
+        });
+        c.runAtTickTime(45,()->{
+            try{
+                var boss=(net.minecraft.world.entity.boss.enderdragon.EnderDragon)end.getEntity(completed.dragonUUID());
+                c.assertTrue(boss!=null&&AscendedDragon.upgraded(boss)&&boss.getMaxHealth()==1000,"The automatically spawned upgraded dragon must become visible after End chunks and the client load complete");
+                var uuid=boss.getUUID();AscendedDragon.observeDimension(owner);
+                c.assertTrue(completed.dragonUUID().equals(uuid)&&end.getDragons().stream().filter(Entity::isAlive).count()==1,"The same End visit must not repeatedly spawn dragons");c.succeed();
+            }finally{
+                end.getDragons().forEach(Entity::discard);end.setDragonFight(saved);
+                owner.teleportTo(c.getLevel(),original.x,original.y,original.z,Set.of(),0,0,true);owner.connection.handleAcceptPlayerLoad(new net.minecraft.network.protocol.game.ServerboundPlayerLoadedPacket());AscendedDragon.clear();
+            }
+        });
+    }
+
 
 }

@@ -4,9 +4,9 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.*;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public final class SoulPackets {
-    public static final int ACTIVATE_MOMENTUM=2;
+    public static final int TOGGLE_ACCELERATION=2;
     public static boolean handleAction(net.minecraft.server.level.ServerPlayer player,int action){
-        if(action==ACTIVATE_MOMENTUM)return SoulMode.activateMomentum(player);
+        if(action==TOGGLE_ACCELERATION)return AccelerationMod.toggleAcceleration(player);
         if(action==1)return SoulMode.finish(player,null);
         return false;
     }

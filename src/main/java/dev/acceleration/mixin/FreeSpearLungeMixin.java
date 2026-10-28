@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class FreeSpearLungeMixin {
     @Inject(method="apply",at=@At("HEAD"),cancellable=true)
     private void acceleration$freeLunge(ServerLevel world,int level,EnchantedItemInUse item,Entity entity,Vec3 position,CallbackInfo ci){
-        if(item.itemStack().is(AccelerationMod.SPEAR))ci.cancel();
+        if(item.itemStack().is(net.minecraft.tags.ItemTags.SPEARS))ci.cancel();
     }
 }

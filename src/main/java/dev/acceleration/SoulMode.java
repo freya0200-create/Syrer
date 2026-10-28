@@ -27,8 +27,12 @@ public final class SoulMode {
     }
     public static void afterMeleeHit(Entity victim,DamageSource source,boolean hit){
         if(hit&&source.getEntity() instanceof ServerPlayer actor&&source.getDirectEntity()==actor
-                &&victim!=actor&&active(actor)&&!ownBody(actor,victim))finishFromHit(actor,actor.position());
+                &&victim!=actor&&active(actor)&&!STRIKING.contains(actor.getUUID())&&!ownBody(actor,victim)){
+            if(actor.getMainHandItem().is(AccelerationMod.SPEAR))begin(actor,actor.position());
+            else finishFromHit(actor,actor.position());
+        }
     }
+    private static final Set<UUID> STRIKING=new HashSet<>();
     private static final Set<UUID> BODY_DAMAGE=new HashSet<>();
     public static boolean forwardingBodyDamage(ServerPlayer player){return BODY_DAMAGE.contains(player.getUUID());}
     private SoulMode(){}
@@ -152,22 +156,27 @@ public final class SoulMode {
         if(active(player)&&ownBody(player,clicked)&&player.getMainHandItem().is(AccelerationMod.SPEAR)
                 &&player.isWithinEntityInteractionRange(clicked,0))return finish(player,null);
         Entity victim=clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:clicked;
-        if(!active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
+        if(!active(player)||STRIKING.contains(player.getUUID())||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
                 ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinEntityInteractionRange(clicked,0)))return false;
         ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
         if(destination==null){player.sendOverlayMessage(Component.literal("No clear landing space beside that target."));return false;}
-        // End projection before applying one hit: no repeated packet can pop a second totem.
-        finish(player,destination);
-        DamageSource source=new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(STRIKE),player);
-        victim.invulnerableTime=0;
-        // Largest finite damage gives the requested effectively infinite strike without NaN health.
-        float lethal=STRIKE_DAMAGE;
-        if(victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss wither)wither.setInvulnerableTicks(0);
-        boolean hit=victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
-            dragon.hurt(world,dragon.head,source,lethal):victim.hurtServer(world,source,lethal);
-        world.playSound(null,player.getX(),player.getY(),player.getZ(),SoundEvents.PLAYER_ATTACK_CRIT,SoundSource.PLAYERS,1,1);
-        return hit;
+        // Apply the hit while still at the strike position; materialize only after success.
+        // Guard reentrant callbacks so one projection cannot consume multiple totems.
+        STRIKING.add(player.getUUID());
+        try{
+            DamageSource source=new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(STRIKE),player);
+            victim.invulnerableTime=0;
+            if(victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss wither)wither.setInvulnerableTicks(0);
+            boolean hit=victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
+                dragon.hurt(world,dragon.head,source,STRIKE_DAMAGE):victim.hurtServer(world,source,STRIKE_DAMAGE);
+            if(hit){
+                finishFromHit(player,destination);
+                world.playSound(null,player.getX(),player.getY(),player.getZ(),SoundEvents.PLAYER_ATTACK_CRIT,SoundSource.PLAYERS,1,1);
+            }
+            return hit;
+        }finally{STRIKING.remove(player.getUUID());}
     }
+
     private static Vec3 landing(ServerLevel world,ServerPlayer player,Entity target){
         for(Vec3 offset:new Vec3[]{new Vec3(1.6,0,0),new Vec3(-1.6,0,0),new Vec3(0,0,1.6),new Vec3(0,0,-1.6),new Vec3(0,1,0)}){
             Vec3 position=target.position().add(offset);

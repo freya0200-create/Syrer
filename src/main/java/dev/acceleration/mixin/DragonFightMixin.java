@@ -1,6 +1,7 @@
 package dev.acceleration.mixin;
 import java.util.UUID;
 import dev.acceleration.DragonReward;
+import dev.acceleration.AscendedDragon;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
@@ -10,6 +11,11 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EnderDragonFight.class)
 public abstract class DragonFightMixin {
+    @Shadow private boolean hasPreviouslyKilledDragon;
+    @Inject(method="createNewDragon",at=@At("RETURN"))
+    private void acceleration$upgradeLaterFights(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<EnderDragon> ci){
+        if(hasPreviouslyKilledDragon&&ci.getReturnValue()!=null)AscendedDragon.upgrade(ci.getReturnValue());
+    }
     @Shadow private ServerLevel level;
     @Shadow private BlockPos exitPortalLocation;
     @Shadow private UUID dragonUUID;
