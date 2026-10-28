@@ -6,6 +6,6 @@ public final class AccelerationRules {
         if(sprinting)return previous==Long.MAX_VALUE?previous:Math.max(0,previous)+1;
         return Math.max(0,previous-Math.max(4,previous/10));
     }
-    // Seven percent additional speed per second of continuous running. No gameplay cap.
-    public static double speedBonus(long charge){return Math.max(0,charge)*.07/20.0;}
+    // Twelve percent additional speed per second of continuous running. No gameplay cap.
+    public static double speedBonus(long charge){return Math.max(0,charge)*.12/20.0;}
 }

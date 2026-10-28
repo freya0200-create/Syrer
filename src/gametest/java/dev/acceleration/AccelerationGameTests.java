@@ -65,7 +65,7 @@ public final class AccelerationGameTests {
         p.setSprinting(true);for(int i=0;i<100;i++)AccelerationMod.accelerationTick(p);
         c.assertTrue(AccelerationMod.charge(p)==100,"A spear in an ordinary inventory slot must charge acceleration");
         double charged=p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
-        c.assertTrue(Math.abs(charged-base*1.3*1.35)<1e-6,"Five seconds of sprinting must give a 35-percent acceleration bonus on top of native sprint speed");
+        c.assertTrue(Math.abs(charged-base*1.3*1.60)<1e-6,"Five seconds of sprinting must give a 60-percent acceleration bonus on top of native sprint speed");
         p.setSprinting(false);for(int i=0;i<25;i++)AccelerationMod.accelerationTick(p);
         c.assertTrue(AccelerationMod.charge(p)==0,"Stopping must decay acceleration");
         p.setSprinting(true);for(int i=0;i<50;i++)AccelerationMod.accelerationTick(p);p.getInventory().setItem(20,ItemStack.EMPTY);AccelerationMod.accelerationTick(p);
@@ -445,6 +445,40 @@ public final class AccelerationGameTests {
             c.assertTrue(SoulMode.strike(owner,cart)&&cart.isRemoved()&&!SoulMode.active(owner),"Right-click strike must destroy a damageable non-living minecart and materialize its attacker");
             var wither=c.spawn(EntityTypes.WITHER,new BlockPos(10,2,10));wither.setInvulnerableTicks(200);owner.setPos(wither.position().add(2,0,0));SoulMode.begin(owner,owner.position());
             c.assertTrue(SoulMode.strike(owner,wither)&&wither.isDeadOrDying(),"The strike must kill even a Wither during its spawn protection");c.succeed();
+        });
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:key_activation_validates_spear_and_does_not_toggle_or_queue_lunge")
+    public void keyActivationValidatesSpearAndDoesNotToggleOrQueueLunge(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 anchor=owner.position();
+        owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.WIND_CHARGE));
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM)&&SoulMode.active(owner),"I-key server action must activate with the spear in an ordinary inventory slot");
+        var first=body(c,owner);c.assertTrue(first.position().distanceToSqr(anchor)<1e-8&&!owner.getAbilities().flying&&owner.gameMode()==GameType.SURVIVAL,"Key activation must keep an exact body anchor and normal Survival abilities");
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM)&&body(c,owner)==first,"Repeated key presses must not toggle off or create extra bodies");
+        for(int i=0;i<25;i++)SoulMode.tick(owner);
+        c.assertTrue(SoulMode.active(owner)&&!first.isRemoved(),"Key repeats must not queue a delayed lunge recall");
+        SoulMode.finish(owner,owner.position());owner.getInventory().setItem(20,ItemStack.EMPTY);
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM)&&!SoulMode.active(owner),"Forged activation without a spear must be rejected");
+        owner.getInventory().setItem(20,AccelerationSpear.create(c.getLevel()));owner.setGameMode(GameType.SPECTATOR);
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM),"Spectator activation must be rejected");
+        owner.setGameMode(GameType.SURVIVAL);owner.startRiding(c.spawn(EntityTypes.MINECART,new BlockPos(4,2,4)),true,true);
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.ACTIVATE_MOMENTUM),"Activation while riding must be rejected");owner.stopRiding();
+        c.assertTrue(!SoulPackets.handleAction(owner,999),"Unknown action packets must be ignored");c.succeed();
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:right_click_joust_always_uses_maximum_ghost_damage")
+    public void rightClickJoustAlwaysUsesMaximumGhostDamage(GameTestHelper c){
+        setup(c);var owner=player(c);var target=player(c);
+        c.runAtTickTime(5,()->{
+            var stand=new StrikeStand(c.getLevel());stand.setPos(owner.position().add(3.5,0,0));c.getLevel().addFreshEntity(stand);
+            SoulMode.activateMomentum(owner);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+            owner.stabAttack(EquipmentSlot.MAINHAND,stand,.01F,true,false,false);
+            c.assertTrue(stand.received==Float.MAX_VALUE&&stand.isRemoved()&&!SoulMode.active(owner),"A native right-click joust with tiny base damage must still apply the maximum ghost strike using the spear's actual reach");
+            owner.stopUsingItem();target.setPos(owner.position().add(3.5,0,0));target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
+            target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+            SoulMode.activateMomentum(owner);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+            owner.stabAttack(EquipmentSlot.MAINHAND,target,.01F,true,false,false);
+            c.assertTrue(target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner),"A native right-click ghost joust must pop exactly one totem and reunite the body: health="+target.getHealth()+", totem="+target.getOffhandItem()+", projected="+SoulMode.active(owner));owner.stopUsingItem();c.succeed();
         });
     }
 

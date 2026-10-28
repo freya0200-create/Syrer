@@ -42,14 +42,19 @@ public final class SoulMode {
     }
     public static boolean active(ServerPlayer player){return SoulState.get(player.level().getServer()).projection(player.getUUID())!=null;}
     private static void sync(ServerPlayer player,boolean active){player.getEntityData().set(ProjectionPhysics.ACTIVE,active);if(ServerPlayNetworking.canSend(player,SoulPackets.State.TYPE))ServerPlayNetworking.send(player,new SoulPackets.State(active));}
-    public static boolean begin(ServerPlayer player,Vec3 anchor){
+    public static boolean activateMomentum(ServerPlayer player){
+        return !active(player)&&begin(player,player.position(),true);
+    }
+    public static boolean begin(ServerPlayer player,Vec3 anchor){return begin(player,anchor,false);}
+    private static boolean begin(ServerPlayer player,Vec3 anchor,boolean fromKey){
         if(active(player)){
             if(!player.isAlive()||!player.getMainHandItem().is(AccelerationMod.SPEAR))return false;
             // Native enchantment has applied its impulse, but movement arrives in later ticks.
             LUNGE_RETURNS.put(player.getUUID(),new LungeReturn(player.position(),player.position(),0,0));return true;
         }
-        if(!player.isAlive()||player.isSpectator()||active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)
-                ||player.getCooldowns().isOnCooldown(player.getMainHandItem())||player.isPassenger())return false;
+        if(!player.isAlive()||player.isSpectator()||active(player)||player.isSleeping()
+                ||(!fromKey&&!player.getMainHandItem().is(AccelerationMod.SPEAR))||!AccelerationMod.carrying(player)
+                ||player.getCooldowns().isOnCooldown(new net.minecraft.world.item.ItemStack(AccelerationMod.SPEAR))||player.isPassenger())return false;
         HIT_RETURNS.remove(player.getUUID());
         player.gameMode().updatePlayerAbilities(player.getAbilities());
         ServerLevel world=player.level();
@@ -133,15 +138,22 @@ public final class SoulMode {
         return hit;
     }
     private static boolean eligible(ServerPlayer player,Entity victim){
-        if(victim==player||!victim.isAlive()||victim.isInvulnerable()||victim.entityTags().contains(BODY_TAG)||victim.level()!=player.level())return false;
+        if(victim==player||ProjectionPhysics.active(victim)||!victim.isAlive()||victim.isInvulnerable()||victim.entityTags().contains(BODY_TAG)||victim.level()!=player.level())return false;
         return !(victim instanceof Player target)||(!target.isCreative()&&!target.isSpectator()&&player.level().getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP)&&player.canHarmPlayer(target));
     }
-    public static boolean strike(ServerPlayer player,Entity clicked){
+    public static boolean ghostJoustHit(Entity target,DamageSource source){
+        return source.getEntity() instanceof ServerPlayer actor&&source.getDirectEntity()==actor
+            &&active(actor)&&actor.isUsingItem()&&actor.getMainHandItem().is(AccelerationMod.SPEAR)
+            &&actor.getUseItem().is(AccelerationMod.SPEAR)&&!ownBody(actor,target);
+    }
+    public static boolean strikeFromJoust(ServerPlayer player,Entity clicked){return strike(player,clicked,true);}
+    public static boolean strike(ServerPlayer player,Entity clicked){return strike(player,clicked,false);}
+    private static boolean strike(ServerPlayer player,Entity clicked,boolean jousting){
         if(active(player)&&ownBody(player,clicked)&&player.getMainHandItem().is(AccelerationMod.SPEAR)
                 &&player.isWithinEntityInteractionRange(clicked,0))return finish(player,null);
         Entity victim=clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:clicked;
         if(!active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
-                ||!player.isWithinEntityInteractionRange(clicked,0))return false;
+                ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinEntityInteractionRange(clicked,0)))return false;
         ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
         if(destination==null){player.sendOverlayMessage(Component.literal("No clear landing space beside that target."));return false;}
         // End projection before applying one hit: no repeated packet can pop a second totem.

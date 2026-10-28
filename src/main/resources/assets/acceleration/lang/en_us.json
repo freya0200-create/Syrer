@@ -2,5 +2,7 @@
   "item.acceleration.acceleration_spear": "Ghost Spear",
   "death.attack.acceleration.soul_strike": "%1$s was soul-pierced by %2$s",
   "death.attack.acceleration.soul_strike.player": "%1$s was soul-pierced by %2$s",
-  "entity.acceleration.player_body": "Player Body"
+  "entity.acceleration.player_body": "Player Body",
+  "key.acceleration.activate_momentum": "Activate Momentum Glitch",
+  "key.category.acceleration.controls": "Acceleration Mod"
 }

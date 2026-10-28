@@ -4,6 +4,12 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.*;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public final class SoulPackets {
+    public static final int ACTIVATE_MOMENTUM=2;
+    public static boolean handleAction(net.minecraft.server.level.ServerPlayer player,int action){
+        if(action==ACTIVATE_MOMENTUM)return SoulMode.activateMomentum(player);
+        if(action==1)return SoulMode.finish(player,null);
+        return false;
+    }
     public record Action(int action) implements CustomPacketPayload {
         public static final Type<Action> TYPE=new Type<>(AccelerationMod.id("soul_action"));
         public static final StreamCodec<RegistryFriendlyByteBuf,Action> CODEC=StreamCodec.composite(ByteBufCodecs.VAR_INT,Action::action,Action::new);
@@ -17,7 +23,7 @@ public final class SoulPackets {
     public static void initialize(){
         PayloadTypeRegistry.serverboundPlay().register(Action.TYPE,Action.CODEC);PayloadTypeRegistry.clientboundPlay().register(State.TYPE,State.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(Action.TYPE,(payload,context)->{
-            if(payload.action()==1)SoulMode.finish(context.player(),null);
+            handleAction(context.player(),payload.action());
         });
     }
 }
