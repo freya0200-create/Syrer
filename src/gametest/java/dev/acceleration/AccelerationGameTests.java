@@ -65,7 +65,7 @@ public final class AccelerationGameTests {
         p.setSprinting(true);for(int i=0;i<100;i++)AccelerationMod.accelerationTick(p);
         c.assertTrue(AccelerationMod.charge(p)==100,"A spear in an ordinary inventory slot must charge acceleration");
         double charged=p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
-        c.assertTrue(charged>base*1.35&&charged<base*1.4,"Movement attribute must ramp gently rather than jump to four-times speed");
+        c.assertTrue(Math.abs(charged-base*1.3*1.35)<1e-6,"Five seconds of sprinting must give a 35-percent acceleration bonus on top of native sprint speed");
         p.setSprinting(false);for(int i=0;i<25;i++)AccelerationMod.accelerationTick(p);
         c.assertTrue(AccelerationMod.charge(p)==0,"Stopping must decay acceleration");
         p.setSprinting(true);for(int i=0;i<50;i++)AccelerationMod.accelerationTick(p);p.getInventory().setItem(20,ItemStack.EMPTY);AccelerationMod.accelerationTick(p);

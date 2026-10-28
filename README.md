@@ -10,7 +10,7 @@ The weapon has native diamond-spear jab, joust, reach, durability, animations an
 
 ## Acceleration from your inventory
 
-Keep the spear anywhere in your inventory, including an ordinary inventory slot or offhand. You do not need to hold it. Sprinting gradually increases acceleration for as long as you keep running: **+5% after five seconds, +13% after thirteen seconds**, gaining 1% per second, then continuing at the same rate. There is no mod-defined gameplay speed cap (Minecraft still has engine attribute/physics bounds). Stopping rapidly fades the bonus; removing the last spear clears it immediately. Extra spears do not stack extra multipliers. The effect changes the real movement attribute rather than repeatedly giving a Speed potion.
+Keep the spear anywhere in your inventory, including an ordinary inventory slot or offhand. You do not need to hold it. Sprinting gradually increases acceleration for as long as you keep running: **+35% after five seconds, +70% after ten seconds**, gaining 7% per second, then continuing at the same rate. There is no mod-defined gameplay speed cap (Minecraft still has engine attribute/physics bounds). Stopping rapidly fades the bonus; removing the last spear clears it immediately. Extra spears do not stack extra multipliers. The effect changes the real movement attribute rather than repeatedly giving a Speed potion.
 
 ## Leave your body behind
 
@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.2.6+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.2.7+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
