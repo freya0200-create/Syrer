@@ -343,4 +343,51 @@ public final class AccelerationGameTests {
         });
     }
 
+    private static final class SelfWindCharge extends net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.WindCharge {
+        SelfWindCharge(ServerLevel world){super(EntityTypes.WIND_CHARGE,world);}
+        void burst(Vec3 position){setPos(position);explode(position);}
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:self_wind_bursts_stack_upward_without_body_recall")
+    public void selfWindBurstsStackUpwardWithoutBodyRecall(GameTestHelper c){
+        setup(c);var owner=player(c);var attacker=player(c);Vec3 anchor=owner.position();
+        c.runAtTickTime(5,()->{
+            SoulMode.begin(owner,anchor);var body=body(c,owner);Vec3 ghostPosition=anchor.add(8,0,0);owner.setPos(ghostPosition);
+            owner.setDeltaMovement(new Vec3(.3,.7,-.2));
+            var first=new SelfWindCharge(c.getLevel());first.setOwner(owner);first.burst(ghostPosition.add(0,.1,0));
+            double one=owner.getDeltaMovement().y;
+            var second=new SelfWindCharge(c.getLevel());second.setOwner(owner);second.burst(ghostPosition.add(0,.1,0));
+            double two=owner.getDeltaMovement().y;
+            var third=new SelfWindCharge(c.getLevel());third.setOwner(owner);third.burst(ghostPosition.add(0,.1,0));
+            double three=owner.getDeltaMovement().y;
+            c.assertTrue(one>.7&&two>one&&three>two,"Each actual self wind-charge explosion must add upward velocity to the previous velocity");
+            c.assertTrue(Math.abs(owner.getDeltaMovement().x-.3)<1e-6&&Math.abs(owner.getDeltaMovement().z+.2)<1e-6,"Self launches must preserve existing sideways momentum");
+            c.assertTrue(SoulMode.active(owner)&&!body.isRemoved()&&owner.position().distanceToSqr(ghostPosition)<1e-8,"Stacking wind charges must leave the body behind and never teleport the ghost");
+            body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(attacker),4);
+            c.assertTrue(owner.getHealth()==16&&SoulMode.active(owner)&&owner.position().distanceToSqr(ghostPosition)<1e-8,"Another player's body hit must still damage the owner without recall or teleportation");
+            Vec3 ordinary=new Vec3(.1,.2,.3);
+            c.assertTrue(GhostWind.impulse(null,owner,ordinary).equals(ordinary),"Non-wind explosions must remain unchanged");
+            var otherCharge=new SelfWindCharge(c.getLevel());otherCharge.setOwner(attacker);
+            c.assertTrue(GhostWind.impulse(otherCharge,owner,ordinary).equals(ordinary),"Another player's wind charges must keep vanilla knockback");
+            SoulMode.finish(owner,owner.position());
+            c.assertTrue(GhostWind.impulse(first,owner,ordinary).equals(ordinary),"Extra launch power must stop after ghost mode ends");c.succeed();
+        });
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:lunges_cost_no_hunger_in_body_or_ghost_mode")
+    public void lungesCostNoHungerInBodyOrGhostMode(GameTestHelper c){
+        setup(c);var owner=player(c);var food=owner.getFoodData();food.setFoodLevel(10);food.setSaturation(5);
+        for(int i=0;i<10;i++){
+            owner.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(owner,EquipmentSlot.MAINHAND);
+            c.assertTrue(SoulMode.active(owner),"A native body-mode lunge must still activate the projection");
+            SoulMode.finish(owner,owner.position());food.tick(owner);
+            c.assertTrue(food.getFoodLevel()==10&&food.getSaturationLevel()==5,"Lunging from body mode must not accumulate exhaustion or consume saturation/hunger");
+        }
+        SoulMode.begin(owner,owner.position());
+        for(int i=0;i<10;i++)owner.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(owner,EquipmentSlot.MAINHAND);
+        SoulMode.finish(owner,owner.position());for(int i=0;i<10;i++)food.tick(owner);
+        c.assertTrue(food.getFoodLevel()==10&&food.getSaturationLevel()==5,"Ghost lunges must not store hunger costs that appear after reuniting");
+        owner.causeFoodExhaustion(5);food.tick(owner);
+        c.assertTrue(food.getSaturationLevel()==4,"Ordinary non-lunge body-mode exhaustion must still work");c.succeed();
+    }
+
 }
