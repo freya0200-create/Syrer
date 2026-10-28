@@ -20,6 +20,14 @@ public final class SoulMode {
     private static final Set<UUID> BODY_DAMAGE=new HashSet<>();
     public static boolean forwardingBodyDamage(ServerPlayer player){return BODY_DAMAGE.contains(player.getUUID());}
     private SoulMode(){}
+    public static boolean ownBody(Player player,Entity target){
+        if(!(target instanceof PlayerBody body))return false;
+        if(player instanceof ServerPlayer owner){
+            var projection=SoulState.get(owner.level().getServer()).projection(owner.getUUID());
+            return projection!=null&&projection.body().equals(body.getUUID());
+        }
+        return ProjectionPhysics.active(player)&&body.getProfile().partialProfile().id().equals(player.getUUID());
+    }
     public static boolean active(ServerPlayer player){return SoulState.get(player.level().getServer()).projection(player.getUUID())!=null;}
     private static void sync(ServerPlayer player,boolean active){player.getEntityData().set(ProjectionPhysics.ACTIVE,active);if(ServerPlayNetworking.canSend(player,SoulPackets.State.TYPE))ServerPlayNetworking.send(player,new SoulPackets.State(active));}
     public static boolean begin(ServerPlayer player,Vec3 anchor){
@@ -79,11 +87,11 @@ public final class SoulMode {
     }
 
     public static boolean damageBody(ServerLevel world,Entity body,DamageSource source,float amount){
-        if(source.getEntity() instanceof ServerPlayer actor&&ProjectionPhysics.active(actor))return false;
         var session=SoulState.get(world.getServer()).body(body.getUUID());
         if(session==null){body.discard();return false;}
         var owner=world.getServer().getPlayerList().getPlayer(session.owner());
         if(owner==null){body.discard();return false;}
+        if(source.getEntity() instanceof ServerPlayer actor&&ProjectionPhysics.active(actor)&&actor!=owner)return false;
         if(source.getEntity() instanceof Player attacker&&attacker!=owner&&
                 (!world.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP)||!attacker.canHarmPlayer(owner)))return false;
         // The real player's armor, effects, totem, invulnerability frames and health handle this hit.

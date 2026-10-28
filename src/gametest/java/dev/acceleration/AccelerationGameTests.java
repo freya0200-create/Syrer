@@ -219,12 +219,18 @@ public final class AccelerationGameTests {
         setup(c);var owner=player(c);Vec3 anchor=owner.position();
         c.runAtTickTime(5,()->{
             SoulMode.begin(owner,anchor);var body=body(c,owner);owner.setPos(anchor.add(10,4,0));
+            owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
+            owner.setPos(anchor.add(1,0,0));
+            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,body,null)==net.minecraft.world.InteractionResult.PASS,"Normal left-click must be permitted on your own body");
+            owner.attack(body);
+            c.assertTrue(owner.getHealth()<20&&body.getHealth()==owner.getHealth()&&SoulMode.active(owner),"A real vanilla punch on your own body must damage shared health without recall");
+            owner.setHealth(20);owner.invulnerableTime=0;
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4);
-            c.assertTrue(owner.getHealth()==20&&SoulMode.active(owner)&&owner.gameMode()==GameType.SURVIVAL,"Ghost cannot attack its body; the attempted self-hit must not cause recall or Creative mode");
+            c.assertTrue(owner.getHealth()==16&&SoulMode.active(owner)&&owner.gameMode()==GameType.SURVIVAL,"Self damage must be forwarded once without recall or Creative mode");
             owner.invulnerableTime=0;body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),4);
-            c.assertTrue(owner.getHealth()==16&&SoulMode.active(owner),"External body damage must continue to use the same real health pool");
+            c.assertTrue(owner.getHealth()==12&&SoulMode.active(owner),"External body damage must continue to use the same real health pool");
             SoulMode.finish(owner,owner.position());
-            owner.setGameMode(GameType.CREATIVE);SoulMode.begin(owner,owner.position());owner.setGameMode(GameType.SURVIVAL);
+            owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));owner.setGameMode(GameType.CREATIVE);SoulMode.begin(owner,owner.position());owner.setGameMode(GameType.SURVIVAL);
             SoulMode.finish(owner,owner.position());
             c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().instabuild&&!owner.getAbilities().invulnerable&&!owner.getAbilities().mayfly,"A stale Creative snapshot must never override current Survival mode or abilities");c.succeed();
         });
@@ -300,6 +306,24 @@ public final class AccelerationGameTests {
             Vec3 point=anchor.add(8,0,0);var pearl=new LandingPearl(c.getLevel());pearl.setOwner(owner);c.getLevel().addFreshEntity(pearl);pearl.land(point);
             c.assertTrue(!SoulMode.active(owner)&&body.isRemoved()&&owner.position().distanceToSqr(point)<1e-8,"The real native pearl teleport must reunite the body at the landing point, not the launch point");
             c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().flying&&owner.getHealth()==15,"After landing the player must be mortal Survival again, including normal pearl damage");c.succeed();
+        });
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:wind_charges_are_usable_without_materializing")
+    public void windChargesAreUsableWithoutMaterializing(GameTestHelper c){
+        setup(c);var owner=player(c);SoulMode.begin(owner,owner.position());var body=body(c,owner);
+        owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.WIND_CHARGE,2));
+        var hand=net.minecraft.world.InteractionHand.MAIN_HAND;
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),hand,new BlockHitResult(owner.position(),Direction.UP,owner.blockPosition().below(),false));
+        net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),hand);
+        c.assertTrue(SoulMode.active(owner)&&!body.isRemoved(),"Using wind charges in air or while looking at blocks must leave the body behind");
+        owner.setXRot(90);owner.getMainHandItem().use(c.getLevel(),owner,hand);
+        var charges=c.getLevel().getEntitiesOfClass(net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.WindCharge.class,owner.getBoundingBox().inflate(8),charge->charge.getOwner()==owner);
+        c.assertTrue(charges.size()==1&&owner.getMainHandItem().getCount()==1&&SoulMode.active(owner),"A real wind-charge item use must launch and consume a charge without materializing");
+        c.runAtTickTime(10,()->{
+            c.assertTrue(SoulMode.active(owner)&&!body.isRemoved(),"Wind charge impact must not recall the body");
+            c.assertTrue(owner.getDeltaMovement().lengthSqr()>0,"Native wind-charge knockback must still move the ghost for wind jumps");
+            SoulMode.finish(owner,owner.position());c.succeed();
         });
     }
 
