@@ -1,0 +1,2 @@
+Original generated texture interpretation based on the reference image supplied by the user. The reference image itself is not bundled.
+Minecraft built-in item/generated and item/spear_in_hand models are referenced by namespace, not redistributed.

@@ -1,0 +1,13 @@
+GHOST SPEAR - CYAN & GOLD
+Minecraft Java 26.2 / Acceleration Mod
+
+1. Keep the ZIP zipped.
+2. Minecraft: Options > Resource Packs > Open Pack Folder.
+3. Put this ZIP into that folder.
+4. Move Ghost Spear - Cyan & Gold into Selected and place it above other weapon packs. Click Done.
+5. Equip the Ghost Spear from Acceleration Mod.
+
+Only the custom Ghost Spear (acceleration:acceleration_spear) changes. Vanilla spears stay unchanged.
+The cyan/mint prongs, gold guard, purple wrap and cyan pommel follow the supplied reference with a longer shaft. Handheld display is 12 percent larger than the vanilla spear transform and aligned to the purple grip.
+Native spear use/jab animations remain. This pack changes appearance only and does not change damage, reach, acceleration or other mod mechanics.
+Actual first-person/third-person gameplay appearance still needs an in-game check.
