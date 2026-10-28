@@ -134,8 +134,12 @@ public final class AccelerationGameTests {
         c.runAtTickTime(204,()->c.assertTrue(SoulMode.active(p),"Projection must still exist at 199 elapsed ticks"));
         c.runAtTickTime(207,()->{c.assertTrue(SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE,"Projection must remain active beyond the old ten-second timeout");
             p.setShiftKeyDown(true);SoulMode.tick(p);c.assertTrue(SoulMode.active(p),"Sneaking must not end projection");p.setShiftKeyDown(false);
-            Vec3 recall=p.position();p.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(p,EquipmentSlot.MAINHAND);
-            c.assertTrue(!SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(recall)<1e-8,"Lunging again must bring the body to the moving player's position");
+            p.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(p,EquipmentSlot.MAINHAND);
+            c.assertTrue(SoulMode.active(p),"Second lunge must allow movement before recalling the body");});
+        Vec3 endpoint=origin.add(22,5,0);
+        c.runAtTickTime(209,()->{p.setPos(endpoint);p.setDeltaMovement(Vec3.ZERO);});
+        c.runAtTickTime(216,()->{
+            c.assertTrue(!SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(endpoint)<1e-8,"Body must reunite at the actual post-lunge endpoint, not the pre-lunge position");
             c.assertTrue(!p.getAbilities().mayfly&&!p.getAbilities().flying,"Second lunge must restore original flight abilities");c.succeed();});
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:soul_radius_and_missing_spear_force_safe_return")

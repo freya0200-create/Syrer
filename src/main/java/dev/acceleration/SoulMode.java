@@ -3,7 +3,6 @@ package dev.acceleration;
 import java.util.*;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -20,11 +19,17 @@ import net.minecraft.world.phys.*;
 public final class SoulMode {
     public static final String BODY_TAG="acceleration_soul_body";
     public static final ResourceKey<DamageType> STRIKE=ResourceKey.create(Registries.DAMAGE_TYPE,AccelerationMod.id("soul_strike"));
+    private record Returning(Vec3 last,int still,int ticks){}
+    private static final Map<UUID,Returning> RETURNING=new HashMap<>();
     private SoulMode(){}
     public static boolean active(ServerPlayer player){return SoulState.get(player.level().getServer()).projection(player.getUUID())!=null;}
     private static void sync(ServerPlayer player,boolean active){if(ServerPlayNetworking.canSend(player,SoulPackets.State.TYPE))ServerPlayNetworking.send(player,new SoulPackets.State(active));}
     public static boolean begin(ServerPlayer player,Vec3 anchor){
-        if(active(player))return player.isAlive()&&player.getMainHandItem().is(AccelerationMod.SPEAR)&&finish(player,anchor);
+        if(active(player)){
+            if(!player.isAlive()||!player.getMainHandItem().is(AccelerationMod.SPEAR))return false;
+            // Native lunge only sets velocity here; wait for actual subsequent player movement.
+            RETURNING.putIfAbsent(player.getUUID(),new Returning(player.position(),0,0));return true;
+        }
         if(!player.isAlive()||player.isSpectator()||active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)
                 ||player.getCooldowns().isOnCooldown(player.getMainHandItem())||player.isPassenger())return false;
         ServerLevel world=player.level();
@@ -47,7 +52,7 @@ public final class SoulMode {
     /** Null destination returns to the original body; a strike commits the player at the target. */
     public static boolean finish(ServerPlayer player,Vec3 destination){
         var state=SoulState.get(player.level().getServer());var session=state.projection(player.getUUID());if(session==null)return false;
-        state.remove(player.getUUID());
+        state.remove(player.getUUID());RETURNING.remove(player.getUUID());
         for(ServerLevel world:player.level().getServer().getAllLevels()){
             var body=world.getEntity(session.body());if(body!=null)body.discard();
         }
@@ -64,7 +69,14 @@ public final class SoulMode {
         if(!player.isAlive()||!player.level().dimension().equals(session.dimension())
                 ||!AccelerationMod.carrying(player)) {finish(player,null);return;}
         player.setCamera(player);
-        if(player.tickCount%4==0)player.level().sendParticles(ParticleTypes.SOUL,player.getX(),player.getY()+.8,player.getZ(),3,.15,.3,.15,.02);
+        var returning=RETURNING.get(player.getUUID());
+        if(returning!=null){
+            int ticks=returning.ticks()+1;
+            int still=player.position().distanceToSqr(returning.last())<.0025?returning.still()+1:0;
+            // Settle at the real end position, including collisions. Bound continuous movement.
+            if((ticks>=4&&still>=3)||ticks>=40)finish(player,player.position());
+            else RETURNING.put(player.getUUID(),new Returning(player.position(),still,ticks));
+        }
     }
     public static boolean damageBody(ServerLevel world,Entity body,DamageSource source,float amount){
         var session=SoulState.get(world.getServer()).body(body.getUUID());
@@ -87,7 +99,6 @@ public final class SoulMode {
         finish(player,destination);
         DamageSource source=new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(STRIKE),player);
         victim.invulnerableTime=0;boolean hit=victim.hurtServer(world,source,1_000_000F);
-        world.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,victim.getX(),victim.getY()+1,victim.getZ(),30,.4,.8,.4,.08);
         world.playSound(null,player.getX(),player.getY(),player.getZ(),SoundEvents.PLAYER_ATTACK_CRIT,SoundSource.PLAYERS,1,1);
         return hit;
     }

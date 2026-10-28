@@ -18,9 +18,11 @@ Keep the spear anywhere in your inventory, including an ordinary inventory slot 
 2. A body with your skin and equipment stays at the **exact launch position**. You can turn around to see it, and other players can see it too.
 3. Keep playing with your **normal hand, held items, inventory and interactions**. Flight is enabled without changing your game mode. You can move back to look at your body. This version uses the ordinary moving player model plus the stationary body; it does not provide a translucent custom avatar.
 4. **Right-click a nearby player or mob with the spear** to deliver one instant lethal hit and return to normal beside that target. A held Totem of Undying pops; ordinary targets without one die through armor and Protection. This uses normal entity-interaction reach, not a 64-block ray or remote target selection. Clicking empty space does not strike anyone.
-5. **Lunge again** to bring your body to your current position and return to normal without the special hit.
+5. **Lunge again** to bring your body to where you finish the lunge and return to normal without the special hit.
 
-There is **no projection timer, no distance tether, no sneak-to-return and no extra ability cooldown**. Sneaking, opening inventory and normal left-click actions retain their vanilla behavior; a native spear lunge while projected brings the body to you. There are no “soul mode” messages or status labels. Flight uses ordinary player flight with collision, not Spectator mode or wall phasing. Your moving player can take damage normally while the body is behind you.
+There is **no projection timer, no distance tether, no sneak-to-return and no extra ability cooldown**. Sneaking, opening inventory and normal left-click actions retain their vanilla behavior; a native spear lunge while projected brings the body to you. There are no soul particles, “soul mode” messages or status labels. Flight uses ordinary player flight with collision, not Spectator mode or wall phasing. Your moving player can take damage normally while the body is behind you.
+
+The second lunge completes recall after movement settles (three nearly stationary ticks after at least four ticks), or after 40 ticks if you keep moving; it uses your actual position then, not the launch position. This is movement completion, not a duration limit on projection.
 
 Ending projection removes the stationary body and restores your original flight settings and game mode. A single projection delivers only one special strike. The body can be damaged: a hit recalls its owner and forwards incoming damage once. Body equipment copies never drop. Creative/spectator targets, invulnerable entities and body mannequins are excluded from special strikes. Disabled PvP and team friendly-fire rules are respected. A special strike needs a clear, in-bounds landing space beside the victim. Other mods' special immunities may prevent a kill. Losing the last spear, changing dimensions or dying ends projection for cleanup.
 
@@ -45,7 +47,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.1.0+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.1.1+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -59,7 +61,7 @@ Use `/workspace/Acceleration`; do not alter `/workspace/Syrer` when developing t
 ./gradlew runServer # Review Minecraft's EULA before accepting run/eula.txt
 ```
 
-Three rules tests validate acceleration ramp, decay and speed limits. Twelve actual server GameTests cover the real native lunge, exact body anchor and skin, Survival hand/inventory and flight preservation, a right-click entity callback consuming exactly one totem, armor penetration, body damage forwarding, no expiry after the former ten-second limit, sneaking without recall, a second native lunge bringing the body to the moving player, no distance tether, missing-spear cleanup, reward position/deduplication, persistence, PvP protection and the real dragon-fight reward callback. Minecraft's always-pass test also runs. Test-only code is not bundled.
+Three rules tests validate acceleration ramp, decay and speed limits. Twelve actual server GameTests cover the real native lunge, exact body anchor and skin, Survival hand/inventory and flight preservation, a right-click entity callback consuming exactly one totem, armor penetration, body damage forwarding, no expiry after the former ten-second limit, sneaking without recall, a second native lunge bringing the body to the post-lunge position, no distance tether, missing-spear cleanup, reward position/deduplication, persistence, PvP protection and the real dragon-fight reward callback. Minecraft's always-pass test also runs. Test-only code is not bundled.
 
 Server and client sources compile. Graphical first-person hand rendering, looking back at the body, mouse controls and a full multiplayer session still need manual gameplay testing. The server tests verify that projection never changes to Spectator, retains the main-hand item and inventory, and restores original abilities.
 
