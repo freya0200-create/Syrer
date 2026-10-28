@@ -280,9 +280,27 @@ public final class AccelerationGameTests {
         owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.STONE));
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,new BlockHitResult(position,Direction.UP,BlockPos.containing(position),false));
         c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(position)<1e-8&&owner.getDeltaMovement().x==.4,"A block action must reunite at the ghost's current position without a sudden momentum stop");
-        owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));SoulMode.begin(owner,owner.position());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.ENDER_PEARL));
+        owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));SoulMode.begin(owner,owner.position());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.SNOWBALL));
         net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND);
         c.assertTrue(!SoulMode.active(owner),"Using a non-food, non-spear item must materialize the player");c.succeed();
+    }
+
+    private static final class LandingPearl extends net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl {
+        LandingPearl(ServerLevel world){super(EntityTypes.ENDER_PEARL,world);}
+        void land(Vec3 point){setPos(point);setOldPosAndRot();onHit(new BlockHitResult(point,Direction.UP,BlockPos.containing(point).below(),false));}
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:pearl_only_materializes_after_successful_landing")
+    public void pearlOnlyMaterializesAfterSuccessfulLanding(GameTestHelper c){
+        setup(c);var owner=player(c);var anchor=owner.position();
+        c.runAtTickTime(5,()->{
+            SoulMode.begin(owner,anchor);var body=body(c,owner);
+            owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.ENDER_PEARL));
+            net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND);
+            c.assertTrue(SoulMode.active(owner)&&!body.isRemoved(),"Throwing a pearl must keep the player in ghost mode with the body behind");
+            Vec3 point=anchor.add(8,0,0);var pearl=new LandingPearl(c.getLevel());pearl.setOwner(owner);c.getLevel().addFreshEntity(pearl);pearl.land(point);
+            c.assertTrue(!SoulMode.active(owner)&&body.isRemoved()&&owner.position().distanceToSqr(point)<1e-8,"The real native pearl teleport must reunite the body at the landing point, not the launch point");
+            c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().flying&&owner.getHealth()==15,"After landing the player must be mortal Survival again, including normal pearl damage");c.succeed();
+        });
     }
 
 }
