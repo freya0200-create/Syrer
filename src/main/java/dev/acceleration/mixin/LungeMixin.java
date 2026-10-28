@@ -11,8 +11,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EnchantmentHelper.class)
 public abstract class LungeMixin {
     @Unique private static final Map<UUID,Vec3> acceleration$origins=new HashMap<>();
-    @Inject(method="doPostPiercingAttackEffects",at=@At("HEAD"))
+    @Inject(method="doPostPiercingAttackEffects",at=@At("HEAD"),cancellable=true)
     private static void acceleration$remember(ServerLevel world,LivingEntity actor,CallbackInfo ci){
+        if(actor instanceof ServerPlayer player&&SoulMode.active(player)){ci.cancel();return;}
         if(actor instanceof ServerPlayer player&&player.getMainHandItem().is(AccelerationMod.SPEAR)&&!player.isPassenger()
                 &&!player.isFallFlying()&&!player.isInWater()&&(player.isCreative()||player.getFoodData().getFoodLevel()>=7))
             acceleration$origins.put(player.getUUID(),player.position());

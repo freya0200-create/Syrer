@@ -1,5 +1,6 @@
 {
-  "item.acceleration.acceleration_spear": "Acceleration Spear",
+  "item.acceleration.acceleration_spear": "Ghost Spear",
   "death.attack.acceleration.soul_strike": "%1$s was soul-pierced by %2$s",
-  "death.attack.acceleration.soul_strike.player": "%1$s was soul-pierced by %2$s"
+  "death.attack.acceleration.soul_strike.player": "%1$s was soul-pierced by %2$s",
+  "entity.acceleration.player_body": "Player Body"
 }

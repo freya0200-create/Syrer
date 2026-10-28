@@ -1,7 +1,11 @@
 package dev.acceleration;
 public final class AccelerationRules {
-    public static final int CHARGE_TICKS=100;
     private AccelerationRules(){}
-    public static int charge(int previous,boolean carrying,boolean sprinting){return !carrying?0:Math.clamp(previous+(sprinting?1:-4),0,CHARGE_TICKS);}
-    public static double speedBonus(int charge){return Math.clamp(charge,0,CHARGE_TICKS)*3.0/CHARGE_TICKS;}
+    public static long charge(long previous,boolean carrying,boolean sprinting){
+        if(!carrying)return 0;
+        if(sprinting)return previous==Long.MAX_VALUE?previous:Math.max(0,previous)+1;
+        return Math.max(0,previous-Math.max(4,previous/10));
+    }
+    // One percent additional speed per second of continuous running. No gameplay cap.
+    public static double speedBonus(long charge){return Math.max(0,charge)/2000.0;}
 }

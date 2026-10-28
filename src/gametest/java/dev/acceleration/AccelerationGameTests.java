@@ -9,7 +9,6 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.*;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.decoration.Mannequin;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.*;
@@ -42,9 +41,9 @@ public final class AccelerationGameTests {
         p.setPos(Vec3.atBottomCenterOf(c.absolutePos(new BlockPos(2,2,2))));
         p.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));return p;
     }
-    private Mannequin body(GameTestHelper c,ServerPlayer player){
+    private PlayerBody body(GameTestHelper c,ServerPlayer player){
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
-        return (Mannequin)c.getLevel().getEntity(session.body());
+        return (PlayerBody)c.getLevel().getEntity(session.body());
     }
     @GameTest(maxTicks=60,padding=32,environment="acceleration_gametest:reward_has_all_max_enchantments_and_native_spear_components")
     public void rewardHasAllMaxEnchantmentsAndNativeSpearComponents(GameTestHelper c){
@@ -66,17 +65,17 @@ public final class AccelerationGameTests {
         p.setSprinting(true);for(int i=0;i<100;i++)AccelerationMod.accelerationTick(p);
         c.assertTrue(AccelerationMod.charge(p)==100,"A spear in an ordinary inventory slot must charge acceleration");
         double charged=p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
-        c.assertTrue(charged>base*3.9,"Movement attribute must actually receive the four-times multiplier");
+        c.assertTrue(charged>base*1.35&&charged<base*1.4,"Movement attribute must ramp gently rather than jump to four-times speed");
         p.setSprinting(false);for(int i=0;i<25;i++)AccelerationMod.accelerationTick(p);
         c.assertTrue(AccelerationMod.charge(p)==0,"Stopping must decay acceleration");
         p.setSprinting(true);for(int i=0;i<50;i++)AccelerationMod.accelerationTick(p);p.getInventory().setItem(20,ItemStack.EMPTY);AccelerationMod.accelerationTick(p);
-        c.assertTrue(AccelerationMod.charge(p)==0&&p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)<charged/2,"Removing spear must remove speed immediately");c.succeed();
+        c.assertTrue(AccelerationMod.charge(p)==0&&p.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)<charged,"Removing spear must remove speed immediately");c.succeed();
     }
     @GameTest(maxTicks=60,padding=32,environment="acceleration_gametest:native_lunge_leaves_body_exactly_at_launch_position")
     public void nativeLungeLeavesBodyExactlyAtLaunchPosition(GameTestHelper c){
         setup(c);var p=player(c);p.setYRot(-90);p.getFoodData().setFoodLevel(20);
         Vec3 launch=p.position();p.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(p,EquipmentSlot.MAINHAND);
-        c.assertTrue(SoulMode.active(p)&&!p.isSpectator()&&p.gameMode()==GameType.SURVIVAL&&p.getAbilities().flying,"Native lunge must preserve Survival controls and enable flight");
+        c.assertTrue(SoulMode.active(p)&&!p.isSpectator()&&p.gameMode()==GameType.SURVIVAL&&!p.getAbilities().flying&&!p.getAbilities().mayfly,"Native lunge must preserve Survival controls without granting flight");
         var body=body(c,p);c.assertTrue(body!=null&&body.position().distanceToSqr(launch)<1e-8,"Body must be exactly where the lunge began");
         c.assertTrue(p.getMainHandItem().is(AccelerationMod.SPEAR)&&p.containerMenu==p.inventoryMenu,"Projection must keep the held spear and real inventory");
         c.assertTrue(body.getProfile().partialProfile().id().equals(p.getUUID()),"Body must use the owner's actual skin/profile");
@@ -117,30 +116,33 @@ public final class AccelerationGameTests {
         });
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:hitting_body_returns_owner_and_forwards_damage_once")
-    public void hittingBodyReturnsOwnerAndForwardsDamageOnce(GameTestHelper c){
+    public void hittingBodySharesRealHealthWithoutRecallOrModeChange(GameTestHelper c){
         setup(c);var owner=player(c);Vec3 launch=owner.position();
         c.runAtTickTime(5,()->{
             c.assertTrue(SoulMode.begin(owner,launch),"Projection must begin");var body=body(c,owner);
             owner.setPos(launch.add(10,4,0));body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),4);
-            c.assertTrue(!SoulMode.active(owner)&&!owner.isSpectator()&&owner.position().distanceToSqr(launch)<1e-8,"Hitting anchored body must recall owner");
+            c.assertTrue(SoulMode.active(owner)&&owner.gameMode()==GameType.SURVIVAL&&owner.position().distanceToSqr(launch.add(10,4,0))<1e-8,"Body damage must preserve projection, position and Survival mode");
             c.assertTrue(owner.getHealth()==16,"Damage must be forwarded exactly once, after removing spectator invulnerability; health="+owner.getHealth());
-            c.assertTrue(body.isRemoved(),"Body must not remain as a duplicated gear source");c.succeed();
+            c.assertTrue(!body.isRemoved()&&body.getHealth()==owner.getHealth(),"Body must remain linked to real player health");
+            SoulMode.finish(owner,owner.position());c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().invulnerable&&!owner.getAbilities().instabuild,"Reuniting must not give Creative powers");c.succeed();
         });
     }
     @GameTest(maxTicks=240,padding=32,environment="acceleration_gametest:projection_expires_and_restores_original_mode")
-    public void projectionHasNoTimerAndSecondLungeBringsBodyToPlayer(GameTestHelper c){
+    public void projectionHasNoTimerAndDisablesFurtherLunges(GameTestHelper c){
         setup(c);var p=player(c);Vec3 origin=p.position();
         c.runAtTickTime(5,()->{p.setGameMode(GameType.ADVENTURE);c.assertTrue(SoulMode.begin(p,origin),"Adventure projection must begin");p.setPos(origin.add(15,5,0));});
         c.runAtTickTime(204,()->c.assertTrue(SoulMode.active(p),"Projection must still exist at 199 elapsed ticks"));
         c.runAtTickTime(207,()->{c.assertTrue(SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE,"Projection must remain active beyond the old ten-second timeout");
             p.setShiftKeyDown(true);SoulMode.tick(p);c.assertTrue(SoulMode.active(p),"Sneaking must not end projection");p.setShiftKeyDown(false);
+            Vec3 momentum=new Vec3(.3,0,0);p.setDeltaMovement(momentum);
             p.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(p,EquipmentSlot.MAINHAND);
-            c.assertTrue(SoulMode.active(p),"Second lunge must allow movement before recalling the body");});
+            c.assertTrue(SoulMode.active(p)&&p.getDeltaMovement().distanceToSqr(momentum)<1e-8,"Ghost mode must disable new lunges without stopping existing movement or recalling the body");});
         Vec3 endpoint=origin.add(22,5,0);
         c.runAtTickTime(209,()->{p.setPos(endpoint);p.setDeltaMovement(Vec3.ZERO);});
         c.runAtTickTime(216,()->{
-            c.assertTrue(!SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(endpoint)<1e-8,"Body must reunite at the actual post-lunge endpoint, not the pre-lunge position");
-            c.assertTrue(!p.getAbilities().mayfly&&!p.getAbilities().flying,"Second lunge must restore original flight abilities");c.succeed();});
+            c.assertTrue(SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(endpoint)<1e-8&&body(c,p).position().distanceToSqr(origin)<1e-8,"A blocked lunge must never teleport the player, recall the body or stop projection");
+            SoulMode.finish(p,p.position());
+            c.assertTrue(!p.getAbilities().mayfly&&!p.getAbilities().flying,"Explicit cleanup must restore original flight abilities");c.succeed();});
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:soul_radius_and_missing_spear_force_safe_return")
     public void projectionHasNoTetherAndMissingSpearReturnsSafely(GameTestHelper c){
@@ -194,6 +196,93 @@ public final class AccelerationGameTests {
         var reward=rewards.getFirst();
         c.assertTrue(c.getLevel().getBlockState(reward.blockPosition().below()).is(Blocks.DRAGON_EGG),"Real victory reward must be directly above the newly generated dragon egg");
         c.succeed();
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:body_totem_and_death_share_owner_health")
+    public void bodyTotemAndDeathShareOwnerHealth(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 anchor=owner.position();
+        c.runAtTickTime(5,()->{
+            owner.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+            SoulMode.begin(owner,anchor);var body=body(c,owner);owner.setPos(anchor.add(10,4,0));
+            c.assertTrue(body.getType()==AccelerationMod.BODY,"Body must be the dedicated linked avatar, not a mannequin NPC");
+            body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),1000);
+            c.assertTrue(owner.isAlive()&&owner.getHealth()==1&&owner.getOffhandItem().isEmpty(),"A body hit must consume the real player's totem exactly once");
+            c.assertTrue(SoulMode.active(owner)&&!body.isRemoved()&&body.getHealth()==1,"A saved player must remain projected with shared body health");
+            owner.invulnerableTime=0;
+            body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),1000);
+            c.assertTrue(owner.isDeadOrDying()&&!SoulMode.active(owner)&&body.isRemoved(),"A lethal body hit must kill the real owner and clean up without dropping body equipment");
+            c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().instabuild,"Death must not switch to Creative");c.succeed();
+        });
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:body_self_hit_and_current_mode_are_preserved")
+    public void bodySelfHitAndCurrentModeArePreserved(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 anchor=owner.position();
+        c.runAtTickTime(5,()->{
+            SoulMode.begin(owner,anchor);var body=body(c,owner);owner.setPos(anchor.add(10,4,0));
+            body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4);
+            c.assertTrue(owner.getHealth()==20&&SoulMode.active(owner)&&owner.gameMode()==GameType.SURVIVAL,"Ghost cannot attack its body; the attempted self-hit must not cause recall or Creative mode");
+            owner.invulnerableTime=0;body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),4);
+            c.assertTrue(owner.getHealth()==16&&SoulMode.active(owner),"External body damage must continue to use the same real health pool");
+            SoulMode.finish(owner,owner.position());
+            owner.setGameMode(GameType.CREATIVE);SoulMode.begin(owner,owner.position());owner.setGameMode(GameType.SURVIVAL);
+            SoulMode.finish(owner,owner.position());
+            c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().instabuild&&!owner.getAbilities().invulnerable&&!owner.getAbilities().mayfly,"A stale Creative snapshot must never override current Survival mode or abilities");c.succeed();
+        });
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:projection_has_no_flight_or_contact_pushing")
+    public void projectionHasNoFlightOrContactPushing(GameTestHelper c){
+        setup(c);var owner=player(c);var other=player(c);other.setPos(owner.position().add(.4,0,0));
+        var cow=c.spawn(EntityTypes.COW,new BlockPos(3,2,2));
+        SoulMode.begin(owner,owner.position());
+        c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().mayfly&&!owner.getAbilities().flying&&!owner.getAbilities().invulnerable,"Projection must never grant flight or Creative powers");
+        owner.setDeltaMovement(Vec3.ZERO);other.setDeltaMovement(Vec3.ZERO);cow.setDeltaMovement(Vec3.ZERO);
+        owner.push(other);other.push(owner);owner.push(cow);cow.push(owner);
+        c.assertTrue(owner.getDeltaMovement().lengthSqr()==0&&other.getDeltaMovement().lengthSqr()==0&&cow.getDeltaMovement().lengthSqr()==0,"Projected player and contacted players/mobs must not push one another");
+        c.assertTrue(!owner.isPushable()&&!owner.canCollideWith(other)&&!cow.canCollideWith(owner),"Server and synced client contact physics must treat projection as non-colliding");
+        SoulMode.finish(owner,owner.position());other.push(owner);
+        c.assertTrue(owner.isPushable()&&owner.getDeltaMovement().lengthSqr()>0,"Ordinary player pushing must resume after projection ends");c.succeed();
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_ignores_warden_but_body_remains_mortal")
+    public void ghostIgnoresWardenButBodyRemainsMortal(GameTestHelper c){
+        setup(c);var owner=player(c);var warden=c.spawn(EntityTypes.WARDEN,new BlockPos(5,2,5));
+        var zombie=c.spawn(EntityTypes.ZOMBIE,new BlockPos(6,2,6));zombie.setTarget(owner);
+        c.runAtTickTime(5,()->{
+            SoulMode.begin(owner,owner.position());var body=body(c,owner);
+            c.assertTrue(zombie.getTarget()==null,"Starting projection must clear existing mob targeting");
+            zombie.setTarget(owner);c.assertTrue(zombie.getTarget()==null,"Mobs must not acquire the ghost as a target");
+            c.assertTrue(!warden.canTargetEntity(owner)&&warden.canTargetEntity(body),"Warden must ignore the ghost while still being able to target the mortal linked body");
+            float health=owner.getHealth();
+            c.assertTrue(!owner.hurtServer(c.getLevel(),c.getLevel().damageSources().sonicBoom(warden),10)&&owner.getHealth()==health,"Warden sonic boom must not directly hurt the ghost");
+            float mobHealth=zombie.getHealth();
+            c.assertTrue(!zombie.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4)&&zombie.getHealth()==mobHealth,"Ghost must not deal ordinary attack damage");
+            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.FAIL,"Ordinary entity attacks must be blocked");
+            var held=owner.getMainHandItem();owner.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
+            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.FAIL,"Ordinary right-click entity interactions must be blocked");owner.setItemSlot(EquipmentSlot.MAINHAND,held);
+            body.hurtServer(c.getLevel(),c.getLevel().damageSources().sonicBoom(warden),4);
+            c.assertTrue(owner.getHealth()==health-4&&SoulMode.active(owner),"A Warden hit on the body must damage the shared real health without recall");
+            SoulMode.finish(owner,owner.position());c.succeed();
+        });
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_hunger_eating_and_materializing_actions")
+    public void ghostHungerEatingAndMaterializingActions(GameTestHelper c){
+        setup(c);var owner=player(c);SoulMode.begin(owner,owner.position());var food=owner.getFoodData();food.setFoodLevel(10);food.setSaturation(0);
+        owner.causeFoodExhaustion(40);for(int i=0;i<200;i++)food.tick(owner);
+        c.assertTrue(food.getFoodLevel()==10&&owner.getHealth()==20,"Hunger and health must not drain during projection");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.APPLE));
+        net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND);
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,new BlockHitResult(owner.position(),Direction.UP,owner.blockPosition(),false));
+        food.eat(4,.3F);
+        c.assertTrue(SoulMode.active(owner)&&food.getFoodLevel()==14,"Eating must still work without bringing back the body");
+        Vec3 position=owner.position().add(6,0,0);owner.setPos(position);owner.setDeltaMovement(new Vec3(.4,0,0));
+        owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.STONE));
+        net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,new BlockHitResult(position,Direction.UP,BlockPos.containing(position),false));
+        c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(position)<1e-8&&owner.getDeltaMovement().x==.4,"A block action must reunite at the ghost's current position without a sudden momentum stop");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));SoulMode.begin(owner,owner.position());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.ENDER_PEARL));
+        net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND);
+        c.assertTrue(!SoulMode.active(owner),"Using a non-food, non-spear item must materialize the player");c.succeed();
     }
 
 }
