@@ -49,6 +49,8 @@ public final class AccelerationGameTests {
     @GameTest(maxTicks=60,padding=32,environment="acceleration_gametest:reward_has_all_max_enchantments_and_native_spear_components")
     public void rewardHasAllMaxEnchantmentsAndNativeSpearComponents(GameTestHelper c){
         setup(c);var stack=AccelerationSpear.create(c.getLevel());
+        c.assertTrue(stack.getMaxDamage()==Items.DIAMOND_SPEAR.getDefaultInstance().getMaxDamage(),"Spear must use diamond durability, not netherite");
+        c.assertTrue(stack.get(DataComponents.ATTRIBUTE_MODIFIERS).equals(Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.ATTRIBUTE_MODIFIERS)),"Base combat attributes must match a diamond spear");
         c.assertTrue(stack.has(DataComponents.PIERCING_WEAPON)&&stack.has(DataComponents.KINETIC_WEAPON),"Reward must be a real jab/joust spear");
         c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements().forEach(e->{
             if(!e.is(EnchantmentTags.CURSE)&&e.value().isSupportedItem(stack))c.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(e,stack)==e.value().getMaxLevel(),"Every supported non-curse enchantment must be maximal: "+e.key().identifier());
@@ -74,32 +76,35 @@ public final class AccelerationGameTests {
     public void nativeLungeLeavesBodyExactlyAtLaunchPosition(GameTestHelper c){
         setup(c);var p=player(c);p.setYRot(-90);p.getFoodData().setFoodLevel(20);
         Vec3 launch=p.position();p.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(p,EquipmentSlot.MAINHAND);
-        c.assertTrue(SoulMode.active(p)&&p.isSpectator(),"An actual native spear lunge must begin projection");
+        c.assertTrue(SoulMode.active(p)&&!p.isSpectator()&&p.gameMode()==GameType.SURVIVAL&&p.getAbilities().flying,"Native lunge must preserve Survival controls and enable flight");
         var body=body(c,p);c.assertTrue(body!=null&&body.position().distanceToSqr(launch)<1e-8,"Body must be exactly where the lunge began");
+        c.assertTrue(p.getMainHandItem().is(AccelerationMod.SPEAR)&&p.containerMenu==p.inventoryMenu,"Projection must keep the held spear and real inventory");
         c.assertTrue(body.getProfile().partialProfile().id().equals(p.getUUID()),"Body must use the owner's actual skin/profile");
         p.setPos(launch.add(10,3,0));
         c.assertTrue(body.position().distanceToSqr(launch)<1e-8,"Body must remain behind when the soul moves");
         c.assertTrue(SoulMode.finish(p,null)&&!p.isSpectator()&&p.position().distanceToSqr(launch)<1e-8,"Return must restore Survival at the original body");
-        c.assertTrue(body.isRemoved()&&!p.getAbilities().mayfly&&!p.getAbilities().invulnerable,"Body and spectator abilities must be cleaned up");c.succeed();
+        c.assertTrue(body.isRemoved()&&!p.getAbilities().mayfly&&!p.getAbilities().invulnerable,"Body and temporary flight abilities must be cleaned up");c.succeed();
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:soul_strike_pops_exactly_one_totem_and_teleports")
     public void soulStrikePopsExactlyOneTotemAndTeleports(GameTestHelper c){
-        setup(c);var actor=player(c);var target=player(c);target.setPos(actor.position().add(7,0,0));
+        setup(c);var actor=player(c);var target=player(c);target.setPos(actor.position().add(2,0,0));
         target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
         c.runAtTickTime(5,()->{
             Vec3 launch=actor.position();c.assertTrue(SoulMode.begin(actor,launch),"Projection must begin");
             var body=body(c,actor);actor.setYRot(-90);actor.setXRot(0);
-            c.assertTrue(SoulMode.strikeAimed(actor),"Actual server raycast must select and hit the aimed player");
+            Vec3 nearby=target.position();target.setPos(launch.add(7,0,0));
+            c.assertTrue(!SoulMode.strike(actor,target)&&SoulMode.active(actor),"Right-click strike must require normal interaction reach, not remote aiming");target.setPos(nearby);
+            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click interaction must land the hit");
             c.assertTrue(target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Exactly one normal totem must activate");
             c.assertTrue(!actor.isSpectator()&&!SoulMode.active(actor)&&actor.distanceToSqr(target)<9,"Attacker must materialize beside the target");
             c.assertTrue(body.isRemoved(),"Old body must disappear after a committed strike");
             c.assertTrue(!SoulMode.strike(actor,target)&&target.getHealth()==1,"Repeated action must not cause another hit after projection ends");
-            c.assertTrue(actor.getCooldowns().isOnCooldown(actor.getMainHandItem()),"Projection must apply its cooldown");c.succeed();
+            c.assertTrue(!actor.getCooldowns().isOnCooldown(actor.getMainHandItem()),"Returning must not add an artificial ability timer");c.succeed();
         });
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:soul_strike_kills_without_totem_through_armor")
     public void soulStrikeKillsWithoutTotemThroughArmor(GameTestHelper c){
-        setup(c);var actor=player(c);var target=player(c);target.setPos(actor.position().add(7,0,0));
+        setup(c);var actor=player(c);var target=player(c);target.setPos(actor.position().add(2,0,0));
         var protection=c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.PROTECTION);
         var slots=new EquipmentSlot[]{EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET};
         var items=new Item[]{Items.NETHERITE_HELMET,Items.NETHERITE_CHESTPLATE,Items.NETHERITE_LEGGINGS,Items.NETHERITE_BOOTS};
@@ -123,17 +128,22 @@ public final class AccelerationGameTests {
         });
     }
     @GameTest(maxTicks=240,padding=32,environment="acceleration_gametest:projection_expires_and_restores_original_mode")
-    public void projectionExpiresAndRestoresOriginalMode(GameTestHelper c){
+    public void projectionHasNoTimerAndSecondLungeBringsBodyToPlayer(GameTestHelper c){
         setup(c);var p=player(c);Vec3 origin=p.position();
         c.runAtTickTime(5,()->{p.setGameMode(GameType.ADVENTURE);c.assertTrue(SoulMode.begin(p,origin),"Adventure projection must begin");p.setPos(origin.add(15,5,0));});
         c.runAtTickTime(204,()->c.assertTrue(SoulMode.active(p),"Projection must still exist at 199 elapsed ticks"));
-        c.runAtTickTime(207,()->{c.assertTrue(!SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(origin)<1e-8,"Ten-second timeout must restore original mode and position");c.succeed();});
+        c.runAtTickTime(207,()->{c.assertTrue(SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE,"Projection must remain active beyond the old ten-second timeout");
+            p.setShiftKeyDown(true);SoulMode.tick(p);c.assertTrue(SoulMode.active(p),"Sneaking must not end projection");p.setShiftKeyDown(false);
+            Vec3 recall=p.position();p.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(p,EquipmentSlot.MAINHAND);
+            c.assertTrue(!SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(recall)<1e-8,"Lunging again must bring the body to the moving player's position");
+            c.assertTrue(!p.getAbilities().mayfly&&!p.getAbilities().flying,"Second lunge must restore original flight abilities");c.succeed();});
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:soul_radius_and_missing_spear_force_safe_return")
-    public void soulRadiusAndMissingSpearForceSafeReturn(GameTestHelper c){
+    public void projectionHasNoTetherAndMissingSpearReturnsSafely(GameTestHelper c){
         setup(c);var p=player(c);Vec3 origin=p.position();SoulMode.begin(p,origin);
         p.setPos(origin.add(129,0,0));SoulMode.tick(p);
-        c.assertTrue(!SoulMode.active(p)&&p.position().distanceToSqr(origin)<1e-8,"Soul radius must safely recall the player");
+        c.assertTrue(SoulMode.active(p)&&p.position().distanceToSqr(origin.add(129,0,0))<1e-8,"Projection must not have the old distance tether");
+        SoulMode.finish(p,null);
         p.getCooldowns().removeCooldown(p.getCooldowns().getCooldownGroup(p.getMainHandItem()));SoulMode.begin(p,origin);p.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);SoulMode.tick(p);
         c.assertTrue(!SoulMode.active(p)&&!p.isSpectator(),"Losing the spear must restore the body rather than leave spectator powers");c.succeed();
     }
@@ -157,7 +167,7 @@ public final class AccelerationGameTests {
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:creative_targets_and_disabled_pvp_are_protected")
     public void creativeTargetsAndDisabledPvpAreProtected(GameTestHelper c){
-        setup(c);var actor=player(c);var target=player(c);target.setPos(actor.position().add(7,0,0));target.setGameMode(GameType.CREATIVE);
+        setup(c);var actor=player(c);var target=player(c);target.setPos(actor.position().add(2,0,0));target.setGameMode(GameType.CREATIVE);
         SoulMode.begin(actor,actor.position());c.assertTrue(!SoulMode.strike(actor,target)&&SoulMode.active(actor),"Creative targets must not be killed");
         target.setGameMode(GameType.SURVIVAL);c.getLevel().getGameRules().set(net.minecraft.world.level.gamerules.GameRules.PVP,false,c.getLevel().getServer());
         c.assertTrue(!SoulMode.strike(actor,target)&&target.getHealth()==20,"Disabled PvP must prevent soul strike");

@@ -33,6 +33,15 @@ public final class AccelerationMod implements ModInitializer {
     public static int charge(ServerPlayer player){return CHARGE.getOrDefault(player.getUUID(),0);}
     @Override public void onInitialize(){
         SoulPackets.initialize();
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player,world,hand,entity,hit)->{
+            if(hand!=net.minecraft.world.InteractionHand.MAIN_HAND||!player.getMainHandItem().is(SPEAR))
+                return net.minecraft.world.InteractionResult.PASS;
+            if(world.isClientSide())return net.minecraft.world.InteractionResult.PASS;
+            if(player instanceof ServerPlayer actor&&SoulMode.active(actor)&&entity instanceof net.minecraft.world.entity.LivingEntity target){
+                return SoulMode.strike(actor,target)?net.minecraft.world.InteractionResult.SUCCESS:net.minecraft.world.InteractionResult.FAIL;
+            }
+            return net.minecraft.world.InteractionResult.PASS;
+        });
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output->output.accept(SPEAR));
         ServerTickEvents.END_SERVER_TICK.register(server->{for(ServerPlayer player:server.getPlayerList().getPlayers()){accelerationTick(player);SoulMode.tick(player);}});
         ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->SoulMode.finish(handler.player,null));
@@ -50,7 +59,7 @@ public final class AccelerationMod implements ModInitializer {
                 var player=context.getSource().getPlayerOrException();var stack=AccelerationSpear.create(player.level());
                 if(!player.getInventory().add(stack))player.drop(stack,false);context.getSource().sendSuccess(()->Component.literal("Acceleration Spear granted."),false);return 1;
             }))
-            .then(Commands.literal("soul").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(context->{
+            .then(Commands.literal("project").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(context->{
                 var player=context.getSource().getPlayerOrException();return SoulMode.begin(player,player.position())?1:0;
             }))));
     }

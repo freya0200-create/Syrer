@@ -17,7 +17,7 @@ public final class SoulPackets {
     public static void initialize(){
         PayloadTypeRegistry.serverboundPlay().register(Action.TYPE,Action.CODEC);PayloadTypeRegistry.clientboundPlay().register(State.TYPE,State.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(Action.TYPE,(payload,context)->{
-            if(payload.action()==0)SoulMode.strikeAimed(context.player());else if(payload.action()==1)SoulMode.finish(context.player(),null);
+            if(payload.action()==1)SoulMode.finish(context.player(),null);
         });
     }
 }
