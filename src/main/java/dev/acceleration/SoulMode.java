@@ -19,6 +19,15 @@ public final class SoulMode {
     public static final ResourceKey<DamageType> STRIKE=ResourceKey.create(Registries.DAMAGE_TYPE,AccelerationMod.id("soul_strike"));
     private record LungeReturn(Vec3 start,Vec3 last,int still,int ticks){}
     private static final Map<UUID,LungeReturn> LUNGE_RETURNS=new HashMap<>();
+    private static final Map<UUID,Long> HIT_RETURNS=new HashMap<>();
+    public static boolean hitReturnedThisTick(ServerPlayer player){return HIT_RETURNS.getOrDefault(player.getUUID(),-1L)==player.level().getGameTime();}
+    private static boolean finishFromHit(ServerPlayer player,Vec3 destination){
+        HIT_RETURNS.put(player.getUUID(),player.level().getGameTime());return finish(player,destination);
+    }
+    public static void afterMeleeHit(Entity victim,DamageSource source,boolean hit){
+        if(hit&&source.getEntity() instanceof ServerPlayer actor&&source.getDirectEntity()==actor
+                &&victim!=actor&&active(actor)&&!ownBody(actor,victim))finishFromHit(actor,actor.position());
+    }
     private static final Set<UUID> BODY_DAMAGE=new HashSet<>();
     public static boolean forwardingBodyDamage(ServerPlayer player){return BODY_DAMAGE.contains(player.getUUID());}
     private SoulMode(){}
@@ -40,6 +49,7 @@ public final class SoulMode {
         }
         if(!player.isAlive()||player.isSpectator()||active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)
                 ||player.getCooldowns().isOnCooldown(player.getMainHandItem())||player.isPassenger())return false;
+        HIT_RETURNS.remove(player.getUUID());
         player.gameMode().updatePlayerAbilities(player.getAbilities());
         ServerLevel world=player.level();
         PlayerBody body=AccelerationMod.BODY.create(world,EntitySpawnReason.EVENT);if(body==null)return false;
@@ -86,6 +96,7 @@ public final class SoulMode {
         sync(player,false);return true;
     }
     public static void tick(ServerPlayer player){
+        if(!hitReturnedThisTick(player))HIT_RETURNS.remove(player.getUUID());
         var session=SoulState.get(player.level().getServer()).projection(player.getUUID());if(session==null)return;
         if(!player.isAlive()||!player.level().dimension().equals(session.dimension())
                 ||!AccelerationMod.carrying(player)) {finish(player,null);return;}
@@ -117,7 +128,7 @@ public final class SoulMode {
         if(body instanceof LivingEntity living){living.setHealth(owner.getHealth());if(hit)living.hurtTime=10;}
         if(!owner.isAlive())finish(owner,body.position());
         else if(hit&&source.getEntity()==owner&&source.getDirectEntity()==owner
-                &&source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK))finish(owner,null);
+                &&source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK))finishFromHit(owner,null);
         return hit;
     }
     private static boolean eligible(ServerPlayer player,LivingEntity victim){

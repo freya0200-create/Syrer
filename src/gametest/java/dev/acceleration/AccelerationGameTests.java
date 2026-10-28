@@ -392,28 +392,41 @@ public final class AccelerationGameTests {
         c.assertTrue(food.getSaturationLevel()==4,"Ordinary non-lunge body-mode exhaustion must still work");c.succeed();
     }
 
+
     @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:ghost_can_attack_while_hidden_and_untouchable")
-    public void ghostCanAttackWhileHiddenAndUntouchable(GameTestHelper c){
-        setup(c);var owner=player(c);var observer=player(c);observer.setPos(owner.position().add(2,0,0));
+    public void ghostSuccessfulAttacksReuniteAtCurrentPosition(GameTestHelper c){
+        setup(c);var owner=player(c);var observer=player(c);
         c.runAtTickTime(10,()->{
-            SoulMode.begin(owner,owner.position());var body=body(c,owner);
+            Vec3 anchor=owner.position();SoulMode.begin(owner,anchor);var body=body(c,owner);
+            Vec3 ghostPosition=anchor.add(8,0,0);owner.setPos(ghostPosition);observer.setPos(ghostPosition.add(2,0,0));
             owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.NETHERITE_SWORD));
-            var cow=c.spawn(EntityTypes.COW,new BlockPos(3,2,2));float before=cow.getHealth();
-            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,cow,null)==net.minecraft.world.InteractionResult.PASS,"Ghost must be able to left-click mobs with a normal weapon");
-            owner.attack(cow);
-            c.assertTrue(cow.getHealth()<before&&SoulMode.active(owner),"Native sword attack must damage a mob and leave the player projected");
-            owner.resetOnlyAttackStrengthTicker();owner.attack(observer);
-            c.assertTrue(observer.getHealth()<20&&SoulMode.active(owner),"Native player attacks must also work without ending ghost mode");
             float health=owner.getHealth();observer.attack(owner);
-            c.assertTrue(owner.getHealth()==health&&SoulMode.active(owner),"The attacked player must still be unable to damage the ghost directly");
+            c.assertTrue(owner.getHealth()==health&&SoulMode.active(owner),"Opponents must be unable to damage the ghost before its own action");
             c.assertTrue(!owner.isPickable()&&!owner.isPushable(),"Ghost must not be selectable or physically pushable");
-            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming entity attacks must be rejected");
-            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming right-click interactions must be rejected");
-            c.assertTrue(ProjectionPhysics.hiddenFrom(owner,observer)&&!ProjectionPhysics.hiddenFrom(owner,owner)&&!ProjectionPhysics.hiddenFrom(body,observer),"Rendering policy must hide ghost from others, retain owner's own view, and keep body visible");
-            c.assertTrue(body.isPickable(),"Visible body must remain selectable and vulnerable");
-            SoulMode.finish(owner,owner.position());
-            c.assertTrue(owner.isPickable()&&!ProjectionPhysics.hiddenFrom(owner,observer),"Normal visibility and targeting must return after reuniting");c.succeed();
+            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming attacks must be rejected");
+            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming right-clicks must be rejected");
+            c.assertTrue(ProjectionPhysics.hiddenFrom(owner,observer)&&!ProjectionPhysics.hiddenFrom(owner,owner)&&!ProjectionPhysics.hiddenFrom(body,observer)&&body.isPickable(),"Ghost must be hidden from others while its body remains visible and vulnerable");
+            var cow=c.spawn(EntityTypes.COW,new BlockPos(3,2,2));cow.setPos(ghostPosition.add(0,0,1.5));float before=cow.getHealth();
+            owner.setDeltaMovement(new Vec3(.4,0,0));owner.attack(cow);
+            c.assertTrue(cow.getHealth()<before&&!SoulMode.active(owner)&&body.isRemoved(),"A native successful sword hit must damage the mob and reunite the body");
+            c.assertTrue(owner.position().distanceToSqr(ghostPosition)<1e-8&&owner.getDeltaMovement().x==.4,"Hit recall must bring the body to the ghost and preserve momentum, not return to the old anchor");
+            c.assertTrue(owner.isPickable()&&!ProjectionPhysics.hiddenFrom(owner,observer),"Visibility and normal targeting must resume after the hit");
+            owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));SoulMode.begin(owner,owner.position());
+            owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.NETHERITE_SWORD));owner.resetOnlyAttackStrengthTicker();owner.attack(observer);
+            c.assertTrue(observer.getHealth()<20&&!SoulMode.active(owner),"Successful native hits on players must also reunite the body immediately");c.succeed();
         });
     }
+    @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:normal_spear_hit_recall_does_not_restart_projection")
+    public void normalSpearHitRecallDoesNotRestartProjection(GameTestHelper c){
+        setup(c);var owner=player(c);var target=player(c);
+        c.runAtTickTime(10,()->{
+            Vec3 anchor=owner.position();SoulMode.begin(owner,anchor);var body=body(c,owner);
+            Vec3 strikePosition=anchor.add(8,0,0);owner.setPos(strikePosition);target.setPos(strikePosition.add(0,0,2));owner.setYRot(0);owner.setXRot(0);
+            owner.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(owner,EquipmentSlot.MAINHAND);
+            c.assertTrue(target.getHealth()<20&&!SoulMode.active(owner)&&body.isRemoved(),"A real native spear jab must reunite on a hit and its post-hit Lunge must not create another ghost in the same action");
+            c.assertTrue(owner.position().distanceToSqr(strikePosition)<1e-8,"Normal spear hit must bring the body to the current strike position");c.succeed();
+        });
+    }
+
 
 }
