@@ -107,7 +107,6 @@ public final class SoulMode {
         if(session==null){body.discard();return false;}
         var owner=world.getServer().getPlayerList().getPlayer(session.owner());
         if(owner==null){body.discard();return false;}
-        if(source.getEntity() instanceof ServerPlayer actor&&ProjectionPhysics.active(actor)&&actor!=owner)return false;
         if(source.getEntity() instanceof Player attacker&&attacker!=owner&&
                 (!world.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP)||!attacker.canHarmPlayer(owner)))return false;
         // The real player's armor, effects, totem, invulnerability frames and health handle this hit.

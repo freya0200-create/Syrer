@@ -265,8 +265,8 @@ public final class AccelerationGameTests {
             float health=owner.getHealth();
             c.assertTrue(!owner.hurtServer(c.getLevel(),c.getLevel().damageSources().sonicBoom(warden),10)&&owner.getHealth()==health,"Warden sonic boom must not directly hurt the ghost");
             float mobHealth=zombie.getHealth();
-            c.assertTrue(!zombie.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4)&&zombie.getHealth()==mobHealth,"Ghost must not deal ordinary attack damage");
-            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.FAIL,"Ordinary entity attacks must be blocked");
+            c.assertTrue(zombie.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4)&&zombie.getHealth()<mobHealth,"Ghost must be able to deal ordinary attack damage");
+            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.PASS,"Ordinary ghost attacks must be allowed");
             var held=owner.getMainHandItem();owner.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
             c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.FAIL,"Ordinary right-click entity interactions must be blocked");owner.setItemSlot(EquipmentSlot.MAINHAND,held);
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().sonicBoom(warden),4);
@@ -365,9 +365,11 @@ public final class AccelerationGameTests {
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(attacker),4);
             c.assertTrue(owner.getHealth()==16&&SoulMode.active(owner)&&owner.position().distanceToSqr(ghostPosition)<1e-8,"Another player's body hit must still damage the owner without recall or teleportation");
             Vec3 ordinary=new Vec3(.1,.2,.3);
-            c.assertTrue(GhostWind.impulse(null,owner,ordinary).equals(ordinary),"Non-wind explosions must remain unchanged");
+            c.assertTrue(GhostWind.impulse(null,owner,ordinary).equals(Vec3.ZERO),"Ordinary explosions must not push the untouchable ghost");
             var otherCharge=new SelfWindCharge(c.getLevel());otherCharge.setOwner(attacker);
-            c.assertTrue(GhostWind.impulse(otherCharge,owner,ordinary).equals(ordinary),"Another player's wind charges must keep vanilla knockback");
+            c.assertTrue(GhostWind.impulse(otherCharge,owner,ordinary).equals(Vec3.ZERO),"Another player's wind charges must not push the ghost");
+            Vec3 beforeOtherBlast=owner.getDeltaMovement();otherCharge.burst(ghostPosition.add(0,.1,0));
+            c.assertTrue(owner.getDeltaMovement().distanceToSqr(beforeOtherBlast)<1e-8,"An actual other-player wind-charge explosion must leave ghost velocity unchanged");
             SoulMode.finish(owner,owner.position());
             c.assertTrue(GhostWind.impulse(first,owner,ordinary).equals(ordinary),"Extra launch power must stop after ghost mode ends");c.succeed();
         });
@@ -388,6 +390,30 @@ public final class AccelerationGameTests {
         c.assertTrue(food.getFoodLevel()==10&&food.getSaturationLevel()==5,"Ghost lunges must not store hunger costs that appear after reuniting");
         owner.causeFoodExhaustion(5);food.tick(owner);
         c.assertTrue(food.getSaturationLevel()==4,"Ordinary non-lunge body-mode exhaustion must still work");c.succeed();
+    }
+
+    @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:ghost_can_attack_while_hidden_and_untouchable")
+    public void ghostCanAttackWhileHiddenAndUntouchable(GameTestHelper c){
+        setup(c);var owner=player(c);var observer=player(c);observer.setPos(owner.position().add(2,0,0));
+        c.runAtTickTime(10,()->{
+            SoulMode.begin(owner,owner.position());var body=body(c,owner);
+            owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.NETHERITE_SWORD));
+            var cow=c.spawn(EntityTypes.COW,new BlockPos(3,2,2));float before=cow.getHealth();
+            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,cow,null)==net.minecraft.world.InteractionResult.PASS,"Ghost must be able to left-click mobs with a normal weapon");
+            owner.attack(cow);
+            c.assertTrue(cow.getHealth()<before&&SoulMode.active(owner),"Native sword attack must damage a mob and leave the player projected");
+            owner.resetOnlyAttackStrengthTicker();owner.attack(observer);
+            c.assertTrue(observer.getHealth()<20&&SoulMode.active(owner),"Native player attacks must also work without ending ghost mode");
+            float health=owner.getHealth();observer.attack(owner);
+            c.assertTrue(owner.getHealth()==health&&SoulMode.active(owner),"The attacked player must still be unable to damage the ghost directly");
+            c.assertTrue(!owner.isPickable()&&!owner.isPushable(),"Ghost must not be selectable or physically pushable");
+            c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming entity attacks must be rejected");
+            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming right-click interactions must be rejected");
+            c.assertTrue(ProjectionPhysics.hiddenFrom(owner,observer)&&!ProjectionPhysics.hiddenFrom(owner,owner)&&!ProjectionPhysics.hiddenFrom(body,observer),"Rendering policy must hide ghost from others, retain owner's own view, and keep body visible");
+            c.assertTrue(body.isPickable(),"Visible body must remain selectable and vulnerable");
+            SoulMode.finish(owner,owner.position());
+            c.assertTrue(owner.isPickable()&&!ProjectionPhysics.hiddenFrom(owner,observer),"Normal visibility and targeting must return after reuniting");c.succeed();
+        });
     }
 
 }

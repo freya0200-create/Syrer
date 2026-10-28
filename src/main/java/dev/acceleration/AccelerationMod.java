@@ -41,8 +41,9 @@ public final class AccelerationMod implements ModInitializer {
         net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry.register(BODY,net.minecraft.world.entity.LivingEntity.createLivingAttributes());
         SoulPackets.initialize();
         net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player,world,hand,target,hit)->
-            ProjectionPhysics.active(player)&&!SoulMode.ownBody(player,target)?net.minecraft.world.InteractionResult.FAIL:net.minecraft.world.InteractionResult.PASS);
+            ProjectionPhysics.active(target)?net.minecraft.world.InteractionResult.FAIL:net.minecraft.world.InteractionResult.PASS);
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player,world,hand,entity,hit)->{
+            if(ProjectionPhysics.active(entity))return net.minecraft.world.InteractionResult.FAIL;
             if(!ProjectionPhysics.active(player))return net.minecraft.world.InteractionResult.PASS;
             if(hand!=net.minecraft.world.InteractionHand.MAIN_HAND||!player.getMainHandItem().is(SPEAR))return net.minecraft.world.InteractionResult.FAIL;
             if(world.isClientSide())return net.minecraft.world.InteractionResult.PASS; // Let vanilla send the entity-use packet.

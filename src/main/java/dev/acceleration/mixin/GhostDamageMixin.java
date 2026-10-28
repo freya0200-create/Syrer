@@ -12,8 +12,6 @@ public abstract class GhostDamageMixin {
     private void acceleration$ghostDamage(ServerLevel world,DamageSource source,float amount,CallbackInfoReturnable<Boolean> ci){
         LivingEntity victim=(LivingEntity)(Object)this;
         if(victim instanceof ServerPlayer player&&SoulMode.active(player)&&!SoulMode.forwardingBodyDamage(player)){ci.setReturnValue(false);return;}
-        if(source.getEntity() instanceof ServerPlayer actor&&SoulMode.active(actor)
-                &&!(victim instanceof ServerPlayer player&&SoulMode.forwardingBodyDamage(player)))ci.setReturnValue(false);
     }
     @Inject(method="canBeSeenAsEnemy",at=@At("HEAD"),cancellable=true)
     private void acceleration$notAnEnemy(CallbackInfoReturnable<Boolean> ci){if(ProjectionPhysics.active((LivingEntity)(Object)this))ci.setReturnValue(false);}
