@@ -17,6 +17,8 @@ import net.minecraft.world.phys.*;
 public final class SoulMode {
     public static final String BODY_TAG="acceleration_soul_body";
     public static final ResourceKey<DamageType> STRIKE=ResourceKey.create(Registries.DAMAGE_TYPE,AccelerationMod.id("soul_strike"));
+    private record LungeReturn(Vec3 start,Vec3 last,int still,int ticks){}
+    private static final Map<UUID,LungeReturn> LUNGE_RETURNS=new HashMap<>();
     private static final Set<UUID> BODY_DAMAGE=new HashSet<>();
     public static boolean forwardingBodyDamage(ServerPlayer player){return BODY_DAMAGE.contains(player.getUUID());}
     private SoulMode(){}
@@ -31,7 +33,11 @@ public final class SoulMode {
     public static boolean active(ServerPlayer player){return SoulState.get(player.level().getServer()).projection(player.getUUID())!=null;}
     private static void sync(ServerPlayer player,boolean active){player.getEntityData().set(ProjectionPhysics.ACTIVE,active);if(ServerPlayNetworking.canSend(player,SoulPackets.State.TYPE))ServerPlayNetworking.send(player,new SoulPackets.State(active));}
     public static boolean begin(ServerPlayer player,Vec3 anchor){
-        if(active(player))return false; // Further lunges are ordinary movement, never recall.
+        if(active(player)){
+            if(!player.isAlive()||!player.getMainHandItem().is(AccelerationMod.SPEAR))return false;
+            // Native enchantment has applied its impulse, but movement arrives in later ticks.
+            LUNGE_RETURNS.put(player.getUUID(),new LungeReturn(player.position(),player.position(),0,0));return true;
+        }
         if(!player.isAlive()||player.isSpectator()||active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)
                 ||player.getCooldowns().isOnCooldown(player.getMainHandItem())||player.isPassenger())return false;
         player.gameMode().updatePlayerAbilities(player.getAbilities());
@@ -63,7 +69,7 @@ public final class SoulMode {
     /** Null destination returns to the original body; a strike commits the player at the target. */
     public static boolean finish(ServerPlayer player,Vec3 destination){
         var state=SoulState.get(player.level().getServer());var session=state.projection(player.getUUID());if(session==null)return false;
-        state.remove(player.getUUID());
+        state.remove(player.getUUID());LUNGE_RETURNS.remove(player.getUUID());
         for(ServerLevel world:player.level().getServer().getAllLevels()){
             var body=world.getEntity(session.body());if(body!=null)body.discard();
         }
@@ -84,6 +90,16 @@ public final class SoulMode {
         if(!player.isAlive()||!player.level().dimension().equals(session.dimension())
                 ||!AccelerationMod.carrying(player)) {finish(player,null);return;}
         player.setCamera(player);
+        var pending=LUNGE_RETURNS.get(player.getUUID());
+        if(pending!=null){
+            int ticks=pending.ticks()+1;
+            int still=player.position().distanceToSqr(pending.last())<.0025?pending.still()+1:0;
+            boolean travelled=player.position().distanceToSqr(pending.start())>.04;
+            // Wait for forward movement to settle, then reunite at the actual position.
+            // Continuous running/falling resolves after one second, retaining all momentum.
+            if((ticks>=4&&travelled&&still>=3)||ticks>=20)finish(player,player.position());
+            else LUNGE_RETURNS.put(player.getUUID(),new LungeReturn(pending.start(),player.position(),still,ticks));
+        }
     }
 
     public static boolean damageBody(ServerLevel world,Entity body,DamageSource source,float amount){

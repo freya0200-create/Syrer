@@ -128,7 +128,7 @@ public final class AccelerationGameTests {
         });
     }
     @GameTest(maxTicks=240,padding=32,environment="acceleration_gametest:projection_expires_and_restores_original_mode")
-    public void projectionHasNoTimerAndDisablesFurtherLunges(GameTestHelper c){
+    public void projectionHasNoTimerAndLungeReunitesAfterForwardMovement(GameTestHelper c){
         setup(c);var p=player(c);Vec3 origin=p.position();
         c.runAtTickTime(5,()->{p.setGameMode(GameType.ADVENTURE);c.assertTrue(SoulMode.begin(p,origin),"Adventure projection must begin");p.setPos(origin.add(15,5,0));});
         c.runAtTickTime(204,()->c.assertTrue(SoulMode.active(p),"Projection must still exist at 199 elapsed ticks"));
@@ -136,12 +136,12 @@ public final class AccelerationGameTests {
             p.setShiftKeyDown(true);SoulMode.tick(p);c.assertTrue(SoulMode.active(p),"Sneaking must not end projection");p.setShiftKeyDown(false);
             Vec3 momentum=new Vec3(.3,0,0);p.setDeltaMovement(momentum);
             p.getMainHandItem().get(DataComponents.PIERCING_WEAPON).attack(p,EquipmentSlot.MAINHAND);
-            c.assertTrue(SoulMode.active(p)&&p.getDeltaMovement().distanceToSqr(momentum)<1e-8,"Ghost mode must disable new lunges without stopping existing movement or recalling the body");});
+            c.assertTrue(SoulMode.active(p)&&p.getDeltaMovement().lengthSqr()>momentum.lengthSqr(),"Ghost lunge must apply its real impulse and leave the body behind while moving");});
         Vec3 endpoint=origin.add(22,5,0);
-        c.runAtTickTime(209,()->{p.setPos(endpoint);p.setDeltaMovement(Vec3.ZERO);});
+        c.runAtTickTime(209,()->{p.setPos(endpoint);p.setDeltaMovement(new Vec3(.4,.1,0));});
         c.runAtTickTime(216,()->{
-            c.assertTrue(SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(endpoint)<1e-8&&body(c,p).position().distanceToSqr(origin)<1e-8,"A blocked lunge must never teleport the player, recall the body or stop projection");
-            SoulMode.finish(p,p.position());
+            c.assertTrue(!SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(endpoint)<1e-8,"Body must reunite at the actual post-lunge position, not the lunge start");
+            c.assertTrue(p.getDeltaMovement().distanceToSqr(new Vec3(.4,.1,0))<1e-8,"Reuniting after the lunge must preserve momentum without suddenly stopping");
             c.assertTrue(!p.getAbilities().mayfly&&!p.getAbilities().flying,"Explicit cleanup must restore original flight abilities");c.succeed();});
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:soul_radius_and_missing_spear_force_safe_return")
