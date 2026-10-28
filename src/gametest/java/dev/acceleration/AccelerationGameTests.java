@@ -111,7 +111,7 @@ public final class AccelerationGameTests {
         target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
         c.runAtTickTime(5,()->{
             target.doTick();c.assertTrue(target.getArmorValue()==20,"Fixture must wear real netherite armor");
-            c.assertTrue(SoulMode.begin(actor,actor.position())&&SoulMode.strike(actor,target),"Soul strike must land");
+            c.assertTrue(SoulMode.begin(actor,actor.position())&&net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click must immediately teleport and land the lethal strike");
             c.assertTrue(target.isDeadOrDying(),"A target without a totem must die through Protection IV netherite");c.succeed();
         });
     }
@@ -223,13 +223,16 @@ public final class AccelerationGameTests {
             owner.setPos(anchor.add(1,0,0));
             c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,body,null)==net.minecraft.world.InteractionResult.PASS,"Normal left-click must be permitted on your own body");
             owner.attack(body);
-            c.assertTrue(owner.getHealth()<20&&body.getHealth()==owner.getHealth()&&SoulMode.active(owner),"A real vanilla punch on your own body must damage shared health without recall");
-            owner.setHealth(20);owner.invulnerableTime=0;
+            c.assertTrue(owner.getHealth()<20&&!SoulMode.active(owner)&&body.isRemoved()&&owner.position().distanceToSqr(anchor)<1e-8,"Your own vanilla punch must damage shared health and return you to your body");
+            owner.setHealth(20);owner.invulnerableTime=0;owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));
+            SoulMode.begin(owner,anchor);body=body(c,owner);owner.setPos(anchor.add(1,0,0));
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4);
-            c.assertTrue(owner.getHealth()==16&&SoulMode.active(owner)&&owner.gameMode()==GameType.SURVIVAL,"Self damage must be forwarded once without recall or Creative mode");
-            owner.invulnerableTime=0;body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),4);
-            c.assertTrue(owner.getHealth()==12&&SoulMode.active(owner),"External body damage must continue to use the same real health pool");
-            SoulMode.finish(owner,owner.position());
+            c.assertTrue(owner.getHealth()==16&&!SoulMode.active(owner)&&owner.gameMode()==GameType.SURVIVAL&&owner.position().distanceToSqr(anchor)<1e-8,"Only your own direct hit must recall you, applying damage exactly once");
+            owner.invulnerableTime=0;SoulMode.begin(owner,anchor);body=body(c,owner);owner.setPos(anchor.add(1,0,0));
+            var attacker=player(c);body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(attacker),4);
+            c.assertTrue(owner.getHealth()==12&&SoulMode.active(owner)&&owner.position().distanceToSqr(anchor.add(1,0,0))<1e-8,"Another player's hit must damage you without recalling you");
+            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,body,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-clicking your own body with the spear must also recall you, not lethally strike yourself");
+            c.assertTrue(!SoulMode.active(owner)&&owner.getHealth()==12&&owner.position().distanceToSqr(anchor)<1e-8,"Self right-click must return to the body without the instant-kill hit");
             owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));owner.setGameMode(GameType.CREATIVE);SoulMode.begin(owner,owner.position());owner.setGameMode(GameType.SURVIVAL);
             SoulMode.finish(owner,owner.position());
             c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().instabuild&&!owner.getAbilities().invulnerable&&!owner.getAbilities().mayfly,"A stale Creative snapshot must never override current Survival mode or abilities");c.succeed();
@@ -324,6 +327,19 @@ public final class AccelerationGameTests {
             c.assertTrue(SoulMode.active(owner)&&!body.isRemoved(),"Wind charge impact must not recall the body");
             c.assertTrue(owner.getDeltaMovement().lengthSqr()>0,"Native wind-charge knockback must still move the ghost for wind jumps");
             SoulMode.finish(owner,owner.position());c.succeed();
+        });
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:right_click_dragon_part_is_an_instant_lethal_strike")
+    public void rightClickDragonPartIsAnInstantLethalStrike(GameTestHelper c){
+        setup(c);var owner=player(c);
+        c.runAtTickTime(5,()->{
+            var dragon=EntityTypes.ENDER_DRAGON.create(c.getLevel(),EntitySpawnReason.COMMAND);dragon.setPos(owner.position().add(2,0,0));
+            dragon.head.setPos(owner.position().add(2,0,0));
+            dragon.getPhaseManager().setPhase(net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase.SITTING_SCANNING);
+            SoulMode.begin(owner,owner.position());
+            var result=net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,dragon.head,null);
+            c.assertTrue(result==net.minecraft.world.InteractionResult.SUCCESS&&!SoulMode.active(owner)&&dragon.isDeadOrDying(),"Right-clicking a dragon's actual hitbox must materialize and lethally strike the boss in that interaction");c.succeed();
         });
     }
 

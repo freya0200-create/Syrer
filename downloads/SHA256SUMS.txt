@@ -1,1 +1,1 @@
-58ab75ac4bbf030b4521712fe3fade9b6787e04c64c330a1c8b5a21b98d1734f  acceleration-1.2.3+mc26.2.jar
+80ae77f5a8f06c8e72cce7cc7e5903c3fea1c9d8a4ef12c3f9869e05200f70ce  acceleration-1.2.4+mc26.2.jar

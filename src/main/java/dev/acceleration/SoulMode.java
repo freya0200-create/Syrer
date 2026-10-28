@@ -111,31 +111,41 @@ public final class SoulMode {
         if(source.getEntity() instanceof Player attacker&&attacker!=owner&&
                 (!world.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP)||!attacker.canHarmPlayer(owner)))return false;
         // The real player's armor, effects, totem, invulnerability frames and health handle this hit.
-        // Stay projected: damage does not trigger a return or change game modes.
+        // External damage stays projected; only the owner's own direct hit recalls them.
         boolean hit;
         BODY_DAMAGE.add(owner.getUUID());
         try{hit=owner.hurtServer(owner.level(),source,amount);}finally{BODY_DAMAGE.remove(owner.getUUID());}
         if(body instanceof LivingEntity living){living.setHealth(owner.getHealth());if(hit)living.hurtTime=10;}
         if(!owner.isAlive())finish(owner,body.position());
+        else if(hit&&source.getEntity()==owner&&source.getDirectEntity()==owner
+                &&source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK))finish(owner,null);
         return hit;
     }
     private static boolean eligible(ServerPlayer player,LivingEntity victim){
         if(victim==player||!victim.isAlive()||victim.isInvulnerable()||victim.entityTags().contains(BODY_TAG)||victim.level()!=player.level())return false;
         return !(victim instanceof Player target)||(!target.isCreative()&&!target.isSpectator()&&player.level().getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP)&&player.canHarmPlayer(target));
     }
-    public static boolean strike(ServerPlayer player,LivingEntity victim){
+    public static boolean strike(ServerPlayer player,Entity clicked){
+        if(active(player)&&ownBody(player,clicked)&&player.getMainHandItem().is(AccelerationMod.SPEAR)
+                &&player.isWithinEntityInteractionRange(clicked,0))return finish(player,null);
+        LivingEntity victim=clicked instanceof LivingEntity living?living:
+            clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:null;
+        if(victim==null)return false;
         if(!active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
-                ||!player.isWithinEntityInteractionRange(victim,0))return false;
-        ServerLevel world=player.level();Vec3 destination=landing(world,player,victim);
+                ||!player.isWithinEntityInteractionRange(clicked,0))return false;
+        ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
         if(destination==null){player.sendOverlayMessage(Component.literal("No clear landing space beside that target."));return false;}
         // End projection before applying one hit: no repeated packet can pop a second totem.
         finish(player,destination);
         DamageSource source=new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(STRIKE),player);
-        victim.invulnerableTime=0;boolean hit=victim.hurtServer(world,source,1_000_000F);
+        victim.invulnerableTime=0;
+        float lethal=(float)Math.min(Float.MAX_VALUE,Math.max(1_000_000D,(double)victim.getHealth()+victim.getAbsorptionAmount()+1));
+        boolean hit=victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
+            dragon.hurt(world,dragon.head,source,lethal):victim.hurtServer(world,source,lethal);
         world.playSound(null,player.getX(),player.getY(),player.getZ(),SoundEvents.PLAYER_ATTACK_CRIT,SoundSource.PLAYERS,1,1);
         return hit;
     }
-    private static Vec3 landing(ServerLevel world,ServerPlayer player,LivingEntity target){
+    private static Vec3 landing(ServerLevel world,ServerPlayer player,Entity target){
         for(Vec3 offset:new Vec3[]{new Vec3(1.6,0,0),new Vec3(-1.6,0,0),new Vec3(0,0,1.6),new Vec3(0,0,-1.6),new Vec3(0,1,0)}){
             Vec3 position=target.position().add(offset);
             var box=player.getBoundingBox().move(position.subtract(player.position()));
