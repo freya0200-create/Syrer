@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "acceleration:item/ornate_ghost_spear"
+  }
+}

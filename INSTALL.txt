@@ -1,0 +1,4 @@
+Minecraft Java 26.2 / Acceleration Ghost Spear
+1. Put ghost-spear-halloween-mc26.2.zip in your resourcepacks folder without unzipping.
+2. Options > Resource Packs: enable Halloween Ghost Spear ABOVE the previous cyan/gold spear pack, or disable the old spear pack.
+3. This changes acceleration:acceleration_spear only. No gameplay changes or mod update required.

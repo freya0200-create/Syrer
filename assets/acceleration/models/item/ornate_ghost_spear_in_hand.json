@@ -1,0 +1,76 @@
+{
+  "parent": "minecraft:item/spear_in_hand",
+  "textures": {
+    "layer0": "acceleration:item/ornate_ghost_spear"
+  },
+  "display": {
+    "firstperson_righthand": {
+      "rotation": [
+        -20,
+        90,
+        -35
+      ],
+      "translation": [
+        3.13,
+        5.396,
+        -1.394
+      ],
+      "scale": [
+        1.5232,
+        1.5232,
+        0.7616
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        -20,
+        -90,
+        35
+      ],
+      "translation": [
+        3.13,
+        5.396,
+        -1.394
+      ],
+      "scale": [
+        1.5232,
+        1.5232,
+        0.7616
+      ]
+    },
+    "thirdperson_righthand": {
+      "rotation": [
+        5,
+        270,
+        -40
+      ],
+      "translation": [
+        -0.0,
+        6.512,
+        3.139
+      ],
+      "scale": [
+        1.904,
+        1.904,
+        0.952
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        5,
+        -270,
+        40
+      ],
+      "translation": [
+        -0.0,
+        6.512,
+        3.139
+      ],
+      "scale": [
+        1.904,
+        1.904,
+        0.952
+      ]
+    }
+  }
+}

@@ -1,1 +1,1 @@
-8bb0ebb2eb6f0779b6c8ef132d7fee3d8803aa4b8dc125bcdb963ec3f8354cd0  acceleration-1.4.3+mc26.2.jar
+21c7174d89108195c774f9e15d759656712eee22ddb11aec4f6ab2cc1b61650c  ghost-spear-halloween-mc26.2.zip
