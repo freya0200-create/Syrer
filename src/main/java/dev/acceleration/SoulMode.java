@@ -28,7 +28,8 @@ public final class SoulMode {
     public static void afterMeleeHit(Entity victim,DamageSource source,boolean hit){
         if(hit&&source.getEntity() instanceof ServerPlayer actor&&source.getDirectEntity()==actor
                 &&victim!=actor&&active(actor)&&!STRIKING.contains(actor.getUUID())&&!ownBody(actor,victim)){
-            if(actor.getMainHandItem().is(AccelerationMod.SPEAR))begin(actor,actor.position());
+            if(actor.getMainHandItem().is(AccelerationMod.SPEAR))
+                LUNGE_RETURNS.put(actor.getUUID(),new LungeReturn(actor.position(),actor.position(),0,0));
             else finishFromHit(actor,actor.position());
         }
     }
@@ -53,8 +54,8 @@ public final class SoulMode {
     private static boolean begin(ServerPlayer player,Vec3 anchor,boolean fromKey){
         if(active(player)){
             if(!player.isAlive()||!player.getMainHandItem().is(AccelerationMod.SPEAR))return false;
-            // Native enchantment has applied its impulse, but movement arrives in later ticks.
-            LUNGE_RETURNS.put(player.getUUID(),new LungeReturn(player.position(),player.position(),0,0));return true;
+            // An empty lunge is movement, not a successful attack: keep the existing body.
+            return true;
         }
         if(!player.isAlive()||player.isSpectator()||active(player)||player.isSleeping()
                 ||(!fromKey&&!player.getMainHandItem().is(AccelerationMod.SPEAR))||!AccelerationMod.carrying(player)
@@ -162,7 +163,10 @@ public final class SoulMode {
         if(destination==null){player.sendOverlayMessage(Component.literal("No clear landing space beside that target."));return false;}
         // Collect the narrow forward thrust before any damage, teleport or entity removal.
         Vec3 start=player.getEyePosition();
-        Vec3 direction=clicked.getBoundingBox().getCenter().subtract(start).normalize();
+        var targetBox=clicked.getBoundingBox();
+        // Keep a level thrust for tall targets rather than aiming down through their centre.
+        double aimY=Math.max(targetBox.minY+.1,Math.min(start.y,targetBox.maxY-.1));
+        Vec3 direction=new Vec3(targetBox.getCenter().x,aimY,targetBox.getCenter().z).subtract(start).normalize();
         Vec3 end=start.add(direction.scale(6));
         var obstruction=world.clip(new ClipContext(start,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,player));
         if(obstruction.getType()!=HitResult.Type.MISS)end=obstruction.getLocation();
@@ -170,7 +174,7 @@ public final class SoulMode {
         Map<UUID,Entity> pierced=new LinkedHashMap<>();
         pierced.put(victim.getUUID(),victim);
         world.getEntities(player,new AABB(start,end).inflate(.3),entity->eligible(player,entity))
-            .stream().filter(entity->player.isWithinAttackRange(player.getMainHandItem(),entity.getBoundingBox(),0))
+            .stream()
             .filter(entity->entity.getBoundingBox().inflate(.25).contains(start)
                 ||entity.getBoundingBox().inflate(.25).clip(start,rayEnd).isPresent())
             .sorted(Comparator.comparingDouble(entity->entity.distanceToSqr(player)))

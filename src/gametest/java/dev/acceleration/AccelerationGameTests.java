@@ -140,8 +140,8 @@ public final class AccelerationGameTests {
         Vec3 endpoint=origin.add(22,5,0);
         c.runAtTickTime(209,()->{p.setPos(endpoint);p.setDeltaMovement(new Vec3(.4,.1,0));});
         c.runAtTickTime(216,()->{
-            c.assertTrue(!SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(endpoint)<1e-8,"Body must reunite at the actual post-lunge position, not the lunge start");
-            c.assertTrue(p.getDeltaMovement().distanceToSqr(new Vec3(.4,.1,0))<1e-8,"Reuniting after the lunge must preserve momentum without suddenly stopping");
+            c.assertTrue(SoulMode.active(p)&&p.gameMode()==GameType.ADVENTURE&&p.position().distanceToSqr(endpoint)<1e-8,"An empty ghost lunge must keep the original body and projection");
+            c.assertTrue(p.getDeltaMovement().distanceToSqr(new Vec3(.4,.1,0))<1e-8,"An empty ghost lunge must preserve momentum");
             c.assertTrue(!p.getAbilities().mayfly&&!p.getAbilities().flying,"Explicit cleanup must restore original flight abilities");c.succeed();});
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:soul_radius_and_missing_spear_force_safe_return")
@@ -471,7 +471,7 @@ public final class AccelerationGameTests {
 
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:right_click_joust_always_uses_maximum_ghost_damage")
     public void rightClickJoustAlwaysUsesMaximumGhostDamage(GameTestHelper c){
-        setup(c);var owner=player(c);var target=player(c);
+        setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(0,0,12));
         c.runAtTickTime(5,()->{
             var stand=new StrikeStand(c.getLevel());stand.setPos(owner.position().add(3.5,0,0));c.getLevel().addFreshEntity(stand);
             SoulMode.activateMomentum(owner);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -488,13 +488,12 @@ public final class AccelerationGameTests {
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_spear_pierces_multiple_targets")
     public void ghostSpearPiercesMultipleTargets(GameTestHelper c){
         setup(c);var owner=player(c);var origin=owner.position();
-        var first=new StrikeStand(c.getLevel());first.setPos(origin.add(2,0,0));c.getLevel().addFreshEntity(first);
-        var second=new StrikeStand(c.getLevel());second.setPos(origin.add(3,0,0));c.getLevel().addFreshEntity(second);
+        var first=new net.minecraft.world.entity.animal.golem.IronGolem(EntityTypes.IRON_GOLEM,c.getLevel());first.setPos(origin.add(2,0,0));c.getLevel().addFreshEntity(first);
+        var second=new net.minecraft.world.entity.animal.golem.IronGolem(EntityTypes.IRON_GOLEM,c.getLevel());second.setPos(origin.add(5,0,0));c.getLevel().addFreshEntity(second);
         var side=new StrikeStand(c.getLevel());side.setPos(origin.add(2,0,2));c.getLevel().addFreshEntity(side);
         SoulMode.begin(owner,origin);
         c.assertTrue(SoulMode.strike(owner,first),"Quick right-click must strike");
-        c.assertTrue(first.isRemoved()&&second.isRemoved(),"A single thrust must pierce both aligned targets");
-        c.assertTrue(first.projectedAtDamage&&second.projectedAtDamage,"Both targets must take damage before reunion");
+        c.assertTrue(first.isDeadOrDying()&&second.isDeadOrDying(),"A single quick click must pierce both aligned iron golems, including the second at five blocks");
         c.assertTrue(!side.isRemoved()&&!SoulMode.active(owner),"Side targets must be safe and body must reunite once");c.succeed();
     }
 
