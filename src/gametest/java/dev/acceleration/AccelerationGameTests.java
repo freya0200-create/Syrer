@@ -485,6 +485,19 @@ public final class AccelerationGameTests {
         });
     }
 
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_spear_pierces_multiple_targets")
+    public void ghostSpearPiercesMultipleTargets(GameTestHelper c){
+        setup(c);var owner=player(c);var origin=owner.position();
+        var first=new StrikeStand(c.getLevel());first.setPos(origin.add(2,0,0));c.getLevel().addFreshEntity(first);
+        var second=new StrikeStand(c.getLevel());second.setPos(origin.add(3,0,0));c.getLevel().addFreshEntity(second);
+        var side=new StrikeStand(c.getLevel());side.setPos(origin.add(2,0,2));c.getLevel().addFreshEntity(side);
+        SoulMode.begin(owner,origin);
+        c.assertTrue(SoulMode.strike(owner,first),"Quick right-click must strike");
+        c.assertTrue(first.isRemoved()&&second.isRemoved(),"A single thrust must pierce both aligned targets");
+        c.assertTrue(first.projectedAtDamage&&second.projectedAtDamage,"Both targets must take damage before reunion");
+        c.assertTrue(!side.isRemoved()&&!SoulMode.active(owner),"Side targets must be safe and body must reunite once");c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:hit_precedes_teleport_and_spear_use_does_not_recall_early")
     public void hitPrecedesTeleportAndSpearUseDoesNotRecallEarly(GameTestHelper c){
         setup(c);var owner=player(c);var origin=owner.position();var stand=new StrikeStand(c.getLevel());stand.setPos(origin.add(2,0,0));c.getLevel().addFreshEntity(stand);

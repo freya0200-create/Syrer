@@ -160,15 +160,36 @@ public final class SoulMode {
                 ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinEntityInteractionRange(clicked,0)))return false;
         ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
         if(destination==null){player.sendOverlayMessage(Component.literal("No clear landing space beside that target."));return false;}
-        // Apply the hit while still at the strike position; materialize only after success.
-        // Guard reentrant callbacks so one projection cannot consume multiple totems.
+        // Collect the narrow forward thrust before any damage, teleport or entity removal.
+        Vec3 start=player.getEyePosition();
+        Vec3 direction=clicked.getBoundingBox().getCenter().subtract(start).normalize();
+        Vec3 end=start.add(direction.scale(6));
+        var obstruction=world.clip(new ClipContext(start,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,player));
+        if(obstruction.getType()!=HitResult.Type.MISS)end=obstruction.getLocation();
+        final Vec3 rayEnd=end;
+        Map<UUID,Entity> pierced=new LinkedHashMap<>();
+        pierced.put(victim.getUUID(),victim);
+        world.getEntities(player,new AABB(start,end).inflate(.3),entity->eligible(player,entity))
+            .stream().filter(entity->player.isWithinAttackRange(player.getMainHandItem(),entity.getBoundingBox(),0))
+            .filter(entity->entity.getBoundingBox().inflate(.25).contains(start)
+                ||entity.getBoundingBox().inflate(.25).clip(start,rayEnd).isPresent())
+            .sorted(Comparator.comparingDouble(entity->entity.distanceToSqr(player)))
+            .forEach(entity->{
+                Entity resolved=entity instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:entity;
+                if(eligible(player,resolved))pierced.putIfAbsent(resolved.getUUID(),resolved);
+            });
+        // Damage every distinct victim once while still projected. A totem saves each victim once.
         STRIKING.add(player.getUUID());
         try{
             DamageSource source=new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(STRIKE),player);
-            victim.invulnerableTime=0;
-            if(victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss wither)wither.setInvulnerableTicks(0);
-            boolean hit=victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
-                dragon.hurt(world,dragon.head,source,STRIKE_DAMAGE):victim.hurtServer(world,source,STRIKE_DAMAGE);
+            boolean hit=false;
+            for(Entity target:pierced.values()){
+                target.invulnerableTime=0;
+                if(target instanceof net.minecraft.world.entity.boss.wither.WitherBoss wither)wither.setInvulnerableTicks(0);
+                boolean damaged=target instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
+                    dragon.hurt(world,dragon.head,source,STRIKE_DAMAGE):target.hurtServer(world,source,STRIKE_DAMAGE);
+                hit|=damaged;
+            }
             if(hit){
                 finishFromHit(player,destination);
                 world.playSound(null,player.getX(),player.getY(),player.getZ(),SoundEvents.PLAYER_ATTACK_CRIT,SoundSource.PLAYERS,1,1);

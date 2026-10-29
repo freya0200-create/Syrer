@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.4.0+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.4.1+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -74,3 +74,5 @@ The supplied 13-second reference clip was reviewed visually: disappearance from 
 The first fight stays vanilla (200 HP). After that dragon is defeated, leaving and re-entering the End automatically starts the next fight with an **Ascended Ender Dragon: 1,000 HP / 500 hearts**. This is shared world progression, not a personal visit counter; returning while the original dragon is still alive does not replace it. Native crystal-respawned dragons after the first defeat are upgraded too. There is only one active fight; further returning players cannot duplicate the boss. Normal portal, boss-bar, save and dragon reward handling are retained. The upgraded dragon uses the normal dragon model and appearance.
 
 Each native strafe fireball becomes a volley of **three ender fireballs**, with ten ticks (half a second) between shots. Extra shots do not recursively create more volleys, and a dead/unloaded dragon cancels its queued shots. Reloading the dragon preserves its current damaged health.
+
+Ghost Spear right-click strikes now pierce multiple entities in a narrow forward line within native spear reach. Blocks stop collateral piercing; entities off to the side are unaffected. Every target is damaged once before a single body reunion, so one held totem still saves each victim. This applies to both quick clicks and native jousting hits.
