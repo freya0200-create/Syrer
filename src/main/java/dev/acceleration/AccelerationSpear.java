@@ -11,7 +11,7 @@ import net.minecraft.world.item.enchantment.*;
 public final class AccelerationSpear extends Item {
     public AccelerationSpear(Properties properties){super(properties);}
     public static Properties properties(){
-        return new Properties().spear(ToolMaterial.DIAMOND,1.05F,1.075F,.5F,3F,10F,6.5F,5.1F,10F,4.6F)
+        return new Properties().spear(ToolMaterial.DIAMOND,.5F,1.075F,.5F,3F,10F,6.5F,5.1F,10F,4.6F)
             .setId(ResourceKey.create(Registries.ITEM,AccelerationMod.id("acceleration_spear")));
     }
     public static ItemStack create(ServerLevel world){ItemStack stack=new ItemStack(AccelerationMod.SPEAR);bless(world,stack);return stack;}

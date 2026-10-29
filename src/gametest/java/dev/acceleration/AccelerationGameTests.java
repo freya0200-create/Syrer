@@ -49,7 +49,12 @@ public final class AccelerationGameTests {
     public void rewardHasAllMaxEnchantmentsAndNativeSpearComponents(GameTestHelper c){
         setup(c);var stack=AccelerationSpear.create(c.getLevel());
         c.assertTrue(stack.getMaxDamage()==Items.DIAMOND_SPEAR.getDefaultInstance().getMaxDamage(),"Spear must use diamond durability, not netherite");
-        c.assertTrue(stack.get(DataComponents.ATTRIBUTE_MODIFIERS).equals(Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.ATTRIBUTE_MODIFIERS)),"Base combat attributes must match a diamond spear");
+        var modifiers=stack.get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers();
+        var speed=modifiers.stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED)).findFirst().orElseThrow();
+        c.assertTrue(Math.abs(4+speed.modifier().amount()-2)<1e-6,"Held spear must have 2 attacks per second: half-second cooldown");
+        var damage=modifiers.stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)).findFirst().orElseThrow();
+        var vanillaDamage=Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)).findFirst().orElseThrow();
+        c.assertTrue(damage.equals(vanillaDamage),"Faster spear must retain diamond attack damage");
         c.assertTrue(stack.has(DataComponents.PIERCING_WEAPON)&&stack.has(DataComponents.KINETIC_WEAPON),"Reward must be a real jab/joust spear");
         c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).listElements().forEach(e->{
             if(!e.is(EnchantmentTags.CURSE)&&e.value().isSupportedItem(stack))c.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(e,stack)==e.value().getMaxLevel(),"Every supported non-curse enchantment must be maximal: "+e.key().identifier());

@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.4.2+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.4.3+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -78,3 +78,5 @@ Each native strafe fireball becomes a volley of **three ender fireballs**, with 
 Ghost Spear right-click strikes now pierce multiple entities in a narrow forward line up to six blocks long. Blocks stop collateral piercing; entities off to the side are unaffected. Every target is damaged once before a single body reunion, so one held totem still saves each victim. This applies to both quick clicks and native jousting hits.
 
 1.4.2: Empty ghost lunges keep projection active and the original body in place. Successful jab hits still reunite after movement. Right-click piercing extends six blocks along the thrust, stops at solid blocks, and keeps level through aligned tall mobs; the initial target still requires normal interaction/joust reach.
+
+1.4.3: Ghost Spear attack speed is 2 attacks/second (0.5-second jab/lunge recharge, previously 1.05 seconds). Diamond base damage is unchanged.
