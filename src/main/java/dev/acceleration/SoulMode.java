@@ -30,7 +30,14 @@ public final class SoulMode {
                 &&victim!=actor&&active(actor)&&!STRIKING.contains(actor.getUUID())&&!ownBody(actor,victim)){
             if(actor.getMainHandItem().is(AccelerationMod.SPEAR))
                 LUNGE_RETURNS.put(actor.getUUID(),new LungeReturn(actor.position(),actor.position(),0,0));
-            else finishFromHit(actor,actor.position());
+            else {
+                // Mace smash and Wind Burst evaluate fall distance AFTER damage returns.
+                // The reunion teleport must not erase that context before native item effects.
+                double fall=actor.fallDistance;
+                boolean mace=actor.getMainHandItem().is(net.minecraft.world.item.Items.MACE);
+                finishFromHit(actor,actor.position());
+                if(mace)actor.fallDistance=fall;
+            }
         }
     }
     private static final Set<UUID> STRIKING=new HashSet<>();

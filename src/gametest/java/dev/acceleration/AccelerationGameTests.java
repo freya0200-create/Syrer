@@ -421,6 +421,33 @@ public final class AccelerationGameTests {
             c.assertTrue(observer.getHealth()<20&&!SoulMode.active(owner),"Successful native hits on players must also reunite the body immediately");c.succeed();
         });
     }
+    @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:ghost_mace_wind_burst_survives_reunion")
+    public void ghostMaceWindBurstSurvivesReunion(GameTestHelper c){
+        setup(c);var owner=player(c);var origin=owner.position().add(0,3,0);
+        var mace=new ItemStack(Items.MACE);
+        mace.enchant(c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.WIND_BURST),3);
+        owner.getInventory().setItem(20,owner.getMainHandItem().copy());
+        owner.setItemSlot(EquipmentSlot.MAINHAND,mace);
+        double[] normal={0};
+        c.runAtTickTime(10,()->{
+            var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(origin.add(1,0,0));c.getLevel().addFreshEntity(golem);
+            owner.setPos(origin);owner.setOnGround(false);owner.fallDistance=6;owner.setDeltaMovement(new Vec3(0,-.6,0));
+            owner.attack(golem);normal[0]=owner.getDeltaMovement().y;
+            c.assertTrue(normal[0]>.1,"Normal Wind Burst III smash must launch the attacker");golem.discard();
+        });
+        c.runAtTickTime(45,()->{
+            owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));
+            owner.setPos(origin);SoulMode.begin(owner,origin.add(-5,0,0));var oldBody=body(c,owner);
+            owner.setItemSlot(EquipmentSlot.MAINHAND,mace.copy());
+            var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(origin.add(1,0,0));c.getLevel().addFreshEntity(golem);
+            owner.setOnGround(false);owner.fallDistance=6;owner.setDeltaMovement(new Vec3(0,-.6,0));
+            owner.attack(golem);
+            c.assertTrue(golem.getHealth()<golem.getMaxHealth()&&!SoulMode.active(owner)&&oldBody.isRemoved(),"Ghost mace hit must damage target and reunite body");
+            c.assertTrue(owner.getDeltaMovement().y>.1&&Math.abs(owner.getDeltaMovement().y-normal[0])<1e-6,"Reunion must preserve the same Wind Burst launch as a normal smash: ghost="+owner.getDeltaMovement().y+", normal="+normal[0]);
+            c.succeed();
+        });
+    }
+
     @GameTest(maxTicks=100,padding=32,environment="acceleration_gametest:normal_spear_hit_recall_does_not_restart_projection")
     public void normalSpearHitRecallDoesNotRestartProjection(GameTestHelper c){
         setup(c);var owner=player(c);var target=player(c);Vec3 anchor=owner.position();Vec3 strikePosition=anchor.add(8,0,0),endpoint=strikePosition.add(0,0,3);
