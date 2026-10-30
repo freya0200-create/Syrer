@@ -65,10 +65,10 @@ public final class AccelerationMod implements ModInitializer {
             return net.minecraft.world.InteractionResult.FAIL;
         });
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output->output.accept(SPEAR));
-        ServerTickEvents.END_SERVER_TICK.register(server->{for(ServerPlayer player:server.getPlayerList().getPlayers()){accelerationTick(player);SoulMode.tick(player);}});
+        ServerTickEvents.END_SERVER_TICK.register(server->{for(ServerPlayer player:server.getPlayerList().getPlayers()){accelerationTick(player);SoulMode.tick(player);BlockPhasing.tick(player);}});
         ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->SoulMode.finish(handler.player,null));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{SoulMode.finish(handler.player,null);CHARGE.remove(handler.player.getUUID());ENABLED.remove(handler.player.getUUID());});
-        ServerLifecycleEvents.SERVER_STOPPING.register(server->{for(ServerPlayer player:List.copyOf(server.getPlayerList().getPlayers()))SoulMode.finish(player,null);CHARGE.clear();ENABLED.clear();});
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{SoulMode.finish(handler.player,null);BlockPhasing.forget(handler.player);CHARGE.remove(handler.player.getUUID());ENABLED.remove(handler.player.getUUID());});
+        ServerLifecycleEvents.SERVER_STOPPING.register(server->{for(ServerPlayer player:List.copyOf(server.getPlayerList().getPlayers())){SoulMode.finish(player,null);BlockPhasing.forget(player);}CHARGE.clear();ENABLED.clear();});
         ServerEntityEvents.ENTITY_LOAD.register((entity,world)->{
             if(entity.entityTags().contains(SoulMode.BODY_TAG)){
                 var session=SoulState.get(world.getServer()).body(entity.getUUID());

@@ -20,7 +20,7 @@ public final class AccelerationGameTests {
     private void setup(GameTestHelper c){
         var server=c.getLevel().getServer();
         for(var player:List.copyOf(server.getPlayerList().getPlayers())){
-            SoulMode.finish(player,null);player.level().removePlayerImmediately(player,Entity.RemovalReason.DISCARDED);
+            SoulMode.finish(player,null);BlockPhasing.forget(player);player.level().removePlayerImmediately(player,Entity.RemovalReason.DISCARDED);
         }
         for(var world:server.getAllLevels()){
             List<Entity> remove=new ArrayList<>();
@@ -45,6 +45,53 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:phasing_accepts_real_movement_packets")
+    public void phasingAcceptsRealMovementPackets(GameTestHelper c){
+        setup(c);var owner=player(c);var start=owner.position();
+        c.setBlock(3,2,2,Blocks.STONE);c.setBlock(3,3,2,Blocks.STONE);
+        BlockPhasing.toggle(owner);
+        try{
+            var field=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("awaitingTeleport");field.setAccessible(true);
+            owner.connection.handleAcceptTeleportPacket(new net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket(field.getInt(owner.connection)));
+        }catch(ReflectiveOperationException error){throw new RuntimeException(error);}
+        owner.setPos(start);owner.connection.resetPosition();
+        owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(1,0,0),true,false));
+        c.assertTrue(Math.abs(owner.getX()-start.x-1)<1e-6,"The server must accept a real movement packet entering the wall, without rubber-banding");
+        owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(2,0,0),true,false));
+        c.assertTrue(Math.abs(owner.getX()-start.x-2)<1e-6,"The next movement packet must emerge on the other side");
+        c.assertTrue(BlockPhasing.stop(owner),"Phasing must disable after moving through the wall");c.succeed();
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:block_phasing_toggle_collision_and_safe_exit")
+    public void blockPhasingToggleCollisionAndSafeExit(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 start=owner.position();
+        c.setBlock(3,2,2,Blocks.STONE);c.setBlock(3,3,2,Blocks.STONE);
+        owner.move(MoverType.SELF,new Vec3(2,0,0));
+        c.assertTrue(owner.getX()<start.x+1,"Normal player must collide with the wall");owner.setPos(start);
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.TOGGLE_PHASING)&&BlockPhasing.active(owner),"6-key action must enable phasing");
+        c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().mayfly&&!SoulMode.active(owner),"Phasing must not grant flight, change mode or activate projection");
+        owner.move(MoverType.SELF,new Vec3(2,0,0));
+        c.assertTrue(Math.abs(owner.getX()-start.x-2)<1e-6,"Phased player must move through a solid wall");
+        double y=owner.getY();owner.move(MoverType.SELF,new Vec3(0,-.5,0));
+        c.assertTrue(Math.abs(owner.getY()-y)<1e-6,"Normal floors must remain until deliberately sneaking");
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING)&&BlockPhasing.mode(owner)==1,"7 must select Underneath Blocks mode");owner.move(MoverType.SELF,new Vec3(0,-.5,0));
+        c.assertTrue(owner.getY()<y-.4,"Underneath Blocks mode must let the player descend into a floor");
+        c.assertTrue(!owner.isInWall(),"Phasing inside blocks must not suffocate");
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.TOGGLE_PHASING)&&!BlockPhasing.active(owner),"Pressing 6 again must disable phasing");
+        c.assertTrue(c.getLevel().noCollision(owner,owner.getBoundingBox()),"Disabling inside a floor must relocate to open space");
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING)&&BlockPhasing.mode(owner)==2&&!BlockPhasing.active(owner),"7 must select On Top mode without changing toggle state");
+        owner.setPos(start);c.setBlock(2,4,2,Blocks.STONE);BlockPhasing.toggle(owner);
+        owner.move(MoverType.SELF,new Vec3(0,1,0));
+        c.assertTrue(Math.abs(owner.getY()-start.y-1)<1e-6,"On Top mode must let upward movement pass through a ceiling");BlockPhasing.stop(owner);
+        SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING);c.assertTrue(BlockPhasing.mode(owner)==0,"7 must cycle back to Wall mode");
+        owner.setPos(start);SoulMode.begin(owner,start);var linked=body(c,owner);
+        c.assertTrue(BlockPhasing.toggle(owner),"Phasing must also enable during ghost mode");owner.move(MoverType.SELF,new Vec3(2,0,0));
+        c.assertTrue(SoulMode.active(owner)&&!linked.isRemoved()&&linked.position().distanceToSqr(start)<1e-8,"Phasing must leave linked body anchored and ghost active");
+        BlockPhasing.stop(owner);SoulMode.finish(owner,owner.position());
+        owner.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);owner.getInventory().setItem(20,ItemStack.EMPTY);
+        c.assertTrue(!BlockPhasing.toggle(owner),"Phasing must require the spear in inventory");c.succeed();
+    }
+
     @GameTest(maxTicks=60,padding=32,environment="acceleration_gametest:reward_has_all_max_enchantments_and_native_spear_components")
     public void rewardHasAllMaxEnchantmentsAndNativeSpearComponents(GameTestHelper c){
         setup(c);var stack=AccelerationSpear.create(c.getLevel());

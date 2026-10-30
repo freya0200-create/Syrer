@@ -1,1 +1,36 @@
-{"required":true,"package":"dev.acceleration.mixin","compatibilityLevel":"JAVA_25","mixins":["DragonFightMixin","LungeMixin","PlayerProjectionDataMixin","EntityProjectionCollisionMixin","LivingProjectionCollisionMixin","GhostDamageMixin","GhostWardenMixin","GhostTargetMixin","GhostMobMixin","GhostHungerMixin","GhostExhaustionMixin","GhostPearlMixin","GhostWindExplosionMixin","FreeSpearLungeMixin","GhostPickMixin","GhostHitReturnMixin","DragonFightAccess","DragonTargetAccess","FreeSpearAttackMixin"],"injectors":{"defaultRequire":1},"client":["GhostVisibilityMixin"]}
+{
+  "required": true,
+  "package": "dev.acceleration.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "DragonFightMixin",
+    "LungeMixin",
+    "PlayerProjectionDataMixin",
+    "EntityProjectionCollisionMixin",
+    "LivingProjectionCollisionMixin",
+    "GhostDamageMixin",
+    "GhostWardenMixin",
+    "GhostTargetMixin",
+    "GhostMobMixin",
+    "GhostHungerMixin",
+    "GhostExhaustionMixin",
+    "GhostPearlMixin",
+    "GhostWindExplosionMixin",
+    "FreeSpearLungeMixin",
+    "GhostPickMixin",
+    "GhostHitReturnMixin",
+    "DragonFightAccess",
+    "DragonTargetAccess",
+    "FreeSpearAttackMixin",
+    "BlockPhasingMixin",
+    "PhasingMovementMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "GhostVisibilityMixin",
+    "PhasingPushOutMixin",
+    "PhasingOverlayMixin"
+  ]
+}
