@@ -258,6 +258,29 @@ public final class AccelerationGameTests {
         c.assertTrue(owner.isPushable()&&owner.getDeltaMovement().lengthSqr()>0,"Ordinary player pushing must resume after projection ends");c.succeed();
     }
 
+    @GameTest(maxTicks=180,padding=32,environment="acceleration_gametest:zombie_hunts_and_hits_body_while_ghost_wind_moves_skeleton")
+    public void zombieHuntsAndHitsBodyWhileGhostWindMovesSkeleton(GameTestHelper c){
+        setup(c);var owner=player(c);var anchor=Vec3.atBottomCenterOf(c.absolutePos(new BlockPos(7,2,7)));
+        owner.setPos(anchor);SoulMode.begin(owner,anchor);var linked=body(c,owner);
+        owner.setPos(anchor.add(0,5,0));
+        var zombie=c.spawn(EntityTypes.ZOMBIE,new BlockPos(3,2,7));zombie.setPersistenceRequired();
+        zombie.setItemSlot(EquipmentSlot.HEAD,new ItemStack(Items.IRON_HELMET));
+        double distance=zombie.distanceToSqr(linked);
+        c.runAtTickTime(30,()->{
+            c.assertTrue(zombie.getTarget()==linked&&zombie.distanceToSqr(linked)<distance,"Zombie must naturally acquire the linked body and walk toward it without a manual target assignment");
+            c.assertTrue(!zombie.canAttack(owner),"Zombie must not detect or attack the ghost");
+        });
+        c.runAtTickTime(90,()->{
+            c.assertTrue(owner.getHealth()<20&&SoulMode.active(owner),"Zombie must reach and damage the real owner through the body without recalling the ghost");
+            zombie.discard();
+            var skeleton=c.spawn(EntityTypes.SKELETON,new BlockPos(5,2,5));skeleton.setNoAi(true);
+            skeleton.setDeltaMovement(Vec3.ZERO);Vec3 before=skeleton.position();
+            var charge=new SelfWindCharge(c.getLevel());charge.setOwner(owner);charge.burst(before.add(-.5,.1,0));
+            c.assertTrue(skeleton.getDeltaMovement().lengthSqr()>.001,"A real wind charge fired by the ghost must push a skeleton normally");
+            c.assertTrue(SoulMode.active(owner)&&!linked.isRemoved(),"Using wind charges must keep the ghost and linked body active");c.succeed();
+        });
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_ignores_warden_but_body_remains_mortal")
     public void ghostIgnoresWardenButBodyRemainsMortal(GameTestHelper c){
         setup(c);var owner=player(c);var warden=c.spawn(EntityTypes.WARDEN,new BlockPos(5,2,5));
