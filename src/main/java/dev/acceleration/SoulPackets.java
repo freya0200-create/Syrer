@@ -7,7 +7,9 @@ public final class SoulPackets {
     public static final int TOGGLE_ACCELERATION=2;
     public static final int TOGGLE_PHASING=3;
     public static final int CYCLE_PHASING=4;
+    public static final int STEP_PHASING=5;
     public static boolean handleAction(net.minecraft.server.level.ServerPlayer player,int action){
+        if(action==STEP_PHASING)return BlockPhasing.step(player);
         if(action==CYCLE_PHASING)return BlockPhasing.cycleMode(player);
         if(action==TOGGLE_PHASING)return BlockPhasing.toggle(player);
         if(action==TOGGLE_ACCELERATION)return AccelerationMod.toggleAcceleration(player);

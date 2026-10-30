@@ -14,8 +14,11 @@ public abstract class BlockPhasingMixin {
             Vec3 collision=ci.getReturnValue();
             int mode=BlockPhasing.mode(player);
             boolean walls=mode==0;
-            boolean vertical=mode==1&&movement.y<0||mode==2&&movement.y>0;
-            ci.setReturnValue(new Vec3(walls?movement.x:collision.x,vertical?movement.y:collision.y,walls?movement.z:collision.z));
+            boolean vertical=mode==1&&movement.y<0&&player.isShiftKeyDown()||mode==2&&movement.y>0;
+            double y=vertical?movement.y:collision.y;
+            double minimum=player.level().getMinY()+1;
+            if(player.getY()+y<minimum){y=minimum-player.getY();player.fallDistance=0;}
+            ci.setReturnValue(new Vec3(walls?movement.x:collision.x,y,walls?movement.z:collision.z));
         }
     }
     @Inject(method="isInWall",at=@At("HEAD"),cancellable=true)

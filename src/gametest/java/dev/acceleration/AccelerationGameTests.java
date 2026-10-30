@@ -45,6 +45,38 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:underneath_phasing_requires_sneak_and_stops_before_void")
+    public void underneathPhasingRequiresSneakAndStopsBeforeVoid(GameTestHelper c){
+        setup(c);var owner=player(c);var start=owner.position();
+        SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING);BlockPhasing.toggle(owner);
+        owner.move(MoverType.SELF,new Vec3(0,-.5,0));
+        c.assertTrue(Math.abs(owner.getY()-start.y)<1e-6,"Underneath mode must not automatically drop through floors without Sneak");
+        owner.setShiftKeyDown(true);double minimum=c.getLevel().getMinY()+1;
+        owner.setPos(start.x,minimum+.1,start.z);owner.fallDistance=100;
+        owner.move(MoverType.SELF,new Vec3(0,-5,0));
+        c.assertTrue(owner.getY()>=minimum-1e-6&&owner.fallDistance==0,"Downward phasing must stop above the void and clear fall damage at the boundary");
+        c.assertTrue(!BlockPhasing.step(owner)&&owner.getY()>=minimum-1e-6,"A single phase step must not bypass the bottom safety limit");
+        owner.setShiftKeyDown(false);owner.setPos(start);BlockPhasing.stop(owner);c.succeed();
+    }
+
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:one_block_phase_step_does_not_toggle_or_cross_thick_walls")
+    public void oneBlockPhaseStepDoesNotToggleOrCrossThickWalls(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 start=owner.position();owner.setYRot(-90);owner.setXRot(0);
+        c.setBlock(3,2,2,Blocks.STONE);c.setBlock(3,3,2,Blocks.STONE);
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.STEP_PHASING),"6 must perform a phase step through a one-block wall");
+        c.assertTrue(owner.getX()>start.x+1&&!BlockPhasing.active(owner)&&c.getLevel().noCollision(owner,owner.getBoundingBox()),"Single step must land beyond the wall in clear space without enabling continuous phasing");
+        owner.setPos(start);c.setBlock(4,2,2,Blocks.STONE);c.setBlock(4,3,2,Blocks.STONE);
+        c.assertTrue(!BlockPhasing.step(owner)&&owner.position().distanceToSqr(start)<1e-8,"One press must not cross a two-block-thick wall or leave the player embedded");
+        c.setBlock(4,2,2,Blocks.AIR);c.setBlock(4,3,2,Blocks.AIR);
+        SoulMode.begin(owner,start);var linked=body(c,owner);
+        c.assertTrue(BlockPhasing.step(owner)&&SoulMode.active(owner)&&!linked.isRemoved()&&linked.position().distanceToSqr(start)<1e-8,"Ghost phase step must preserve projection and leave the body behind");
+        SoulMode.finish(owner,owner.position());owner.setPos(start);
+        SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING);
+        c.setBlock(2,0,2,Blocks.AIR);c.setBlock(2,-1,2,Blocks.AIR);c.setBlock(2,-2,2,Blocks.AIR);
+        c.assertTrue(BlockPhasing.step(owner)&&owner.getY()<start.y-1&&c.getLevel().noCollision(owner,owner.getBoundingBox()),"Underneath mode must step through one floor into clear space below");
+        c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:phasing_accepts_real_movement_packets")
     public void phasingAcceptsRealMovementPackets(GameTestHelper c){
         setup(c);var owner=player(c);var start=owner.position();
@@ -74,7 +106,7 @@ public final class AccelerationGameTests {
         c.assertTrue(Math.abs(owner.getX()-start.x-2)<1e-6,"Phased player must move through a solid wall");
         double y=owner.getY();owner.move(MoverType.SELF,new Vec3(0,-.5,0));
         c.assertTrue(Math.abs(owner.getY()-y)<1e-6,"Normal floors must remain until deliberately sneaking");
-        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING)&&BlockPhasing.mode(owner)==1,"7 must select Underneath Blocks mode");owner.move(MoverType.SELF,new Vec3(0,-.5,0));
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING)&&BlockPhasing.mode(owner)==1,"7 must select Underneath Blocks mode");owner.setShiftKeyDown(true);owner.move(MoverType.SELF,new Vec3(0,-.5,0));owner.setShiftKeyDown(false);
         c.assertTrue(owner.getY()<y-.4,"Underneath Blocks mode must let the player descend into a floor");
         c.assertTrue(!owner.isInWall(),"Phasing inside blocks must not suffocate");
         c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.TOGGLE_PHASING)&&!BlockPhasing.active(owner),"Pressing 6 again must disable phasing");

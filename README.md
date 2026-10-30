@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.5.0+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.5.1+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -90,3 +90,7 @@ Ghost Spear right-click strikes now pierce multiple entities in a narrow forward
 1.4.7: Ghost Spear item name is red, including existing spears when in inventory. Anvil custom names are preserved.
 
 1.5.0: Press 6 to toggle phasing while carrying the Ghost Spear. Press 7 to cycle Wall Phasing (sideways), Underneath Blocks Phasing (down through floors), and On Top of Blocks Phasing (up through ceilings). Mode changes work while on or off and do not change ghost/body mode. No flight is granted. Turning off finds nearby open space or your last clear position. Both keys are rebindable in Controls; their vanilla hotbar slot selection also remains.
+
+1.5.1 controls: 6 performs one phase step through a single-block-thick obstacle, landing in open space; it never toggles continuous phasing. With no obstacle it steps one block. Wall mode follows the horizontal cardinal direction you face; the other modes step down/up. 7 still cycles modes. For continuous phasing, tap Sneak briefly (up to 0.25 seconds), release, then press Sneak again within 0.4 seconds and hold for 0.5 seconds. Repeat the gesture to toggle off safely. Normal sneaking/long holds alone do not toggle.
+
+Underneath continuous phasing only passes downward while holding Sneak; ordinary gravity alone does not phase through floors. Phasing movement and one-block steps stop above the bottom of the world rather than entering the void.

@@ -16,7 +16,7 @@ public final class BlockPhasing {
     public static boolean cycleMode(ServerPlayer player){
         if(!player.isAlive()||player.isSpectator()||!AccelerationMod.carrying(player))return false;
         player.getEntityData().set(ProjectionPhysics.PHASE_MODE,(mode(player)+1)%3);
-        sync(player,active(player));player.sendOverlayMessage(Component.literal(modeName(player)+" — "+(active(player)?"ON":"OFF (press 6)")));return true;
+        sync(player,active(player));player.sendOverlayMessage(Component.literal(modeName(player)+" — "+(active(player)?"ON":"OFF (tap Sneak, then hold Sneak)")));return true;
     }
     public static boolean active(Player player){return player.getEntityData().get(ProjectionPhysics.PHASING);}
     private static void sync(ServerPlayer player,boolean on){
@@ -29,8 +29,36 @@ public final class BlockPhasing {
         if(clear(player,player.position()))SAFE.put(player.getUUID(),new Anchor(player.level(),player.position()));
         sync(player,true);player.sendOverlayMessage(Component.literal(modeName(player)+" ON — 7 changes mode"));return true;
     }
+    public static boolean step(ServerPlayer player){
+        if(!player.isAlive()||player.isSpectator()||player.isPassenger()||!AccelerationMod.carrying(player))return false;
+        Vec3 direction;
+        if(mode(player)==1)direction=new Vec3(0,-1,0);
+        else if(mode(player)==2)direction=new Vec3(0,1,0);
+        else{
+            Vec3 look=player.getLookAngle();
+            direction=Math.abs(look.x)>Math.abs(look.z)?new Vec3(Math.signum(look.x),0,0):new Vec3(0,0,Math.signum(look.z));
+        }
+        Vec3 start=player.position(),exit=null;
+        double first=-1;
+        double extent=mode(player)==0?player.getBbWidth():player.getBbHeight();
+        for(double distance=0;distance<=4;distance+=.125){
+            Vec3 position=start.add(direction.scale(distance));
+            boolean open=clear(player,position);
+            if(!open&&first<0)first=distance;
+            if(first>=0&&distance-first>1+extent+.125)break;
+            if(first>=0&&open){exit=position;break;}
+            if(first<0&&distance>=1.5)break;
+        }
+        if(first<0&&clear(player,start.add(direction)))exit=start.add(direction);
+        if(exit==null){player.sendOverlayMessage(Component.literal("One-block phase needs clear space beyond a single block."));return false;}
+        Vec3 velocity=player.getDeltaMovement();
+        player.teleportTo(player.level(),exit.x,exit.y,exit.z,Set.of(),player.getYRot(),player.getXRot(),true);
+        player.setDeltaMovement(velocity);player.fallDistance=0;
+        if(active(player))SAFE.put(player.getUUID(),new Anchor(player.level(),exit));
+        return true;
+    }
     private static boolean clear(ServerPlayer p,Vec3 pos){
-        return pos.y>=p.level().getMinY()&&pos.y+p.getBbHeight()<p.level().getMaxY()
+        return pos.y>=p.level().getMinY()+1&&pos.y+p.getBbHeight()<p.level().getMaxY()
             &&p.level().getWorldBorder().isWithinBounds(net.minecraft.core.BlockPos.containing(pos))
             &&p.level().noCollision(p,p.getBoundingBox().move(pos.subtract(p.position())));
     }

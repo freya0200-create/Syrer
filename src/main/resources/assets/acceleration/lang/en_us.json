@@ -5,6 +5,6 @@
   "entity.acceleration.player_body": "Player Body",
   "key.acceleration.activate_momentum": "Toggle Acceleration",
   "key.category.acceleration.controls": "Acceleration Mod",
-  "key.acceleration.phase": "Toggle Block Phasing",
+  "key.acceleration.phase": "Phase Through One Block",
   "key.acceleration.phase_mode": "Cycle Phasing Mode"
 }
