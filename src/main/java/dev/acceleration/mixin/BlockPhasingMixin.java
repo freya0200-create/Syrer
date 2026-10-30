@@ -10,11 +10,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class BlockPhasingMixin {
     @Inject(method="collide",at=@At("RETURN"),cancellable=true)
     private void acceleration$phaseBlocks(Vec3 movement,CallbackInfoReturnable<Vec3> ci){
-        if((Object)this instanceof Player player&&BlockPhasing.active(player)){
+        if((Object)this instanceof Player player&&BlockPhasing.protectedInside(player)){
             Vec3 collision=ci.getReturnValue();
             int mode=BlockPhasing.mode(player);
-            boolean walls=mode==0;
-            boolean vertical=mode==1&&movement.y<0&&player.isShiftKeyDown()||mode==2&&movement.y>0;
+            boolean walls=BlockPhasing.active(player)&&mode==0;
+            boolean vertical=BlockPhasing.active(player)&&(mode==1&&movement.y<0&&player.isShiftKeyDown()||mode==2&&movement.y>0);
             double y=vertical?movement.y:collision.y;
             double minimum=player.level().getMinY()+1;
             if(player.getY()+y<minimum){y=minimum-player.getY();player.fallDistance=0;}
@@ -23,6 +23,6 @@ public abstract class BlockPhasingMixin {
     }
     @Inject(method="isInWall",at=@At("HEAD"),cancellable=true)
     private void acceleration$noSuffocation(CallbackInfoReturnable<Boolean> ci){
-        if((Object)this instanceof Player player&&BlockPhasing.active(player))ci.setReturnValue(false);
+        if((Object)this instanceof Player player&&BlockPhasing.protectedInside(player))ci.setReturnValue(false);
     }
 }

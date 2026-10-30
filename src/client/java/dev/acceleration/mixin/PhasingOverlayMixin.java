@@ -9,5 +9,5 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ScreenEffectRenderer.class)
 public abstract class PhasingOverlayMixin {
     @Inject(method="getViewBlockingState",at=@At("HEAD"),cancellable=true)
-    private static void acceleration$clearBlockOverlay(Player player,CallbackInfoReturnable<BlockState> ci){if(BlockPhasing.active(player))ci.setReturnValue(null);}
+    private static void acceleration$clearBlockOverlay(Player player,CallbackInfoReturnable<BlockState> ci){if(BlockPhasing.protectedInside(player))ci.setReturnValue(null);}
 }

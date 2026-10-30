@@ -7,5 +7,5 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LocalPlayer.class)
 public abstract class PhasingPushOutMixin {
     @Inject(method="moveTowardsClosestSpace",at=@At("HEAD"),cancellable=true)
-    private void acceleration$stayInsideWall(double x,double z,CallbackInfo ci){if(BlockPhasing.active((LocalPlayer)(Object)this))ci.cancel();}
+    private void acceleration$stayInsideWall(double x,double z,CallbackInfo ci){if(BlockPhasing.protectedInside((LocalPlayer)(Object)this))ci.cancel();}
 }

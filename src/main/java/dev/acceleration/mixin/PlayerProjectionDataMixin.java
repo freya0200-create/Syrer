@@ -8,5 +8,5 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Player.class)
 public abstract class PlayerProjectionDataMixin {
     @Inject(method="defineSynchedData",at=@At("TAIL"))
-    private void acceleration$projectionData(SynchedEntityData.Builder builder,CallbackInfo ci){builder.define(ProjectionPhysics.ACTIVE,false);builder.define(ProjectionPhysics.PHASING,false);builder.define(ProjectionPhysics.PHASE_MODE,0);}
+    private void acceleration$projectionData(SynchedEntityData.Builder builder,CallbackInfo ci){builder.define(ProjectionPhysics.ACTIVE,false);builder.define(ProjectionPhysics.PHASING,false);builder.define(ProjectionPhysics.PHASE_MODE,0);builder.define(ProjectionPhysics.PHASE_EMBEDDED,false);}
 }

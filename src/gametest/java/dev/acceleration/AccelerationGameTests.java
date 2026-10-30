@@ -62,18 +62,18 @@ public final class AccelerationGameTests {
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:one_block_phase_step_does_not_toggle_or_cross_thick_walls")
     public void oneBlockPhaseStepDoesNotToggleOrCrossThickWalls(GameTestHelper c){
         setup(c);var owner=player(c);Vec3 start=owner.position();owner.setYRot(-90);owner.setXRot(0);
-        c.setBlock(3,2,2,Blocks.STONE);c.setBlock(3,3,2,Blocks.STONE);
-        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.STEP_PHASING),"6 must perform a phase step through a one-block wall");
-        c.assertTrue(owner.getX()>start.x+1&&!BlockPhasing.active(owner)&&c.getLevel().noCollision(owner,owner.getBoundingBox()),"Single step must land beyond the wall in clear space without enabling continuous phasing");
-        owner.setPos(start);c.setBlock(4,2,2,Blocks.STONE);c.setBlock(4,3,2,Blocks.STONE);
-        c.assertTrue(!BlockPhasing.step(owner)&&owner.position().distanceToSqr(start)<1e-8,"One press must not cross a two-block-thick wall or leave the player embedded");
-        c.setBlock(4,2,2,Blocks.AIR);c.setBlock(4,3,2,Blocks.AIR);
-        SoulMode.begin(owner,start);var linked=body(c,owner);
+        for(int x=3;x<=4;x++){c.setBlock(x,2,2,Blocks.STONE);c.setBlock(x,3,2,Blocks.STONE);}
+        c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.STEP_PHASING),"6 must step into solid blocks without requiring clear space");
+        c.assertTrue(Math.abs(owner.getX()-start.x-1)<1e-8&&!BlockPhasing.active(owner)&&BlockPhasing.protectedInside(owner),"Single press must move exactly one block and grant embedded protection, not continuous phasing");
+        c.assertTrue(!owner.isInWall(),"Standing inside the wall after a step must not suffocate");
+        c.assertTrue(BlockPhasing.step(owner)&&Math.abs(owner.getX()-start.x-2)<1e-8,"Second press must continue through a thick wall, with no clear-space gate");
+        c.assertTrue(BlockPhasing.step(owner)&&Math.abs(owner.getX()-start.x-3)<1e-8,"Third press must emerge past the wall");BlockPhasing.tick(owner);
+        c.assertTrue(!BlockPhasing.protectedInside(owner)&&!BlockPhasing.active(owner),"Embedded protection must clear after emerging, without enabling continuous phasing");
+        owner.setPos(start);SoulMode.begin(owner,start);var linked=body(c,owner);
         c.assertTrue(BlockPhasing.step(owner)&&SoulMode.active(owner)&&!linked.isRemoved()&&linked.position().distanceToSqr(start)<1e-8,"Ghost phase step must preserve projection and leave the body behind");
         SoulMode.finish(owner,owner.position());owner.setPos(start);
         SoulPackets.handleAction(owner,SoulPackets.CYCLE_PHASING);
-        c.setBlock(2,0,2,Blocks.AIR);c.setBlock(2,-1,2,Blocks.AIR);c.setBlock(2,-2,2,Blocks.AIR);
-        c.assertTrue(BlockPhasing.step(owner)&&owner.getY()<start.y-1&&c.getLevel().noCollision(owner,owner.getBoundingBox()),"Underneath mode must step through one floor into clear space below");
+        c.assertTrue(BlockPhasing.step(owner)&&Math.abs(owner.getY()-start.y+1)<1e-8&&BlockPhasing.protectedInside(owner),"Underneath mode must step exactly one block down even into solid floor");
         c.succeed();
     }
 

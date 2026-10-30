@@ -9,6 +9,7 @@ public final class ProjectionPhysics {
     public static final EntityDataAccessor<Boolean> ACTIVE=SynchedEntityData.defineId(Player.class,EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> PHASING=SynchedEntityData.defineId(Player.class,EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Integer> PHASE_MODE=SynchedEntityData.defineId(Player.class,EntityDataSerializers.INT);
+    public static final EntityDataAccessor<Boolean> PHASE_EMBEDDED=SynchedEntityData.defineId(Player.class,EntityDataSerializers.BOOLEAN);
     public static boolean active(Entity entity){return entity instanceof Player player&&player.getEntityData().get(ACTIVE);}
     public static boolean hiddenFrom(Entity entity,Player viewer){return active(entity)&&entity!=viewer;}
     public static void initialize(){}

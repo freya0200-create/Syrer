@@ -36,7 +36,7 @@ public final class AccelerationClient implements ClientModInitializer {
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(AccelerationMod.BODY,
             context->(net.minecraft.client.renderer.entity.EntityRenderer)new net.minecraft.client.renderer.entity.player.AvatarRenderer<ClientPlayerBody>(context,false));
         ClientPlayNetworking.registerGlobalReceiver(SoulPackets.State.TYPE,(payload,context)->context.client().execute(()->{projecting=payload.active();if(context.client().player!=null)context.client().player.getEntityData().set(ProjectionPhysics.ACTIVE,payload.active());}));
-        ClientPlayNetworking.registerGlobalReceiver(SoulPackets.PhaseState.TYPE,(payload,context)->context.client().execute(()->{if(context.client().player!=null){context.client().player.getEntityData().set(ProjectionPhysics.PHASING,payload.active());context.client().player.getEntityData().set(ProjectionPhysics.PHASE_MODE,payload.mode());}}));
+        ClientPlayNetworking.registerGlobalReceiver(SoulPackets.PhaseState.TYPE,(payload,context)->context.client().execute(()->{if(context.client().player!=null){context.client().player.getEntityData().set(ProjectionPhysics.PHASING,payload.active());context.client().player.getEntityData().set(ProjectionPhysics.PHASE_MODE,payload.mode());context.client().player.getEntityData().set(ProjectionPhysics.PHASE_EMBEDDED,payload.embedded());}}));
         ClientPlayConnectionEvents.DISCONNECT.register((handler,client)->{projecting=false;sneakGesture.reset();});
     }
 }

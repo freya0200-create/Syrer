@@ -13,6 +13,6 @@ public abstract class PhasingMovementMixin {
     @Shadow public ServerPlayer player;
     @Inject(method="isEntityCollidingWithAnythingNew",at=@At("HEAD"),cancellable=true)
     private void acceleration$allowPhasing(LevelReader level,Entity entity,AABB box,double x,double y,double z,CallbackInfoReturnable<Boolean> ci){
-        if(entity==player&&BlockPhasing.active(player))ci.setReturnValue(false);
+        if(entity==player&&BlockPhasing.protectedInside(player))ci.setReturnValue(false);
     }
 }

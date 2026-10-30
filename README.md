@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.5.1+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.5.2+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -94,3 +94,5 @@ Ghost Spear right-click strikes now pierce multiple entities in a narrow forward
 1.5.1 controls: 6 performs one phase step through a single-block-thick obstacle, landing in open space; it never toggles continuous phasing. With no obstacle it steps one block. Wall mode follows the horizontal cardinal direction you face; the other modes step down/up. 7 still cycles modes. For continuous phasing, tap Sneak briefly (up to 0.25 seconds), release, then press Sneak again within 0.4 seconds and hold for 0.5 seconds. Repeat the gesture to toggle off safely. Normal sneaking/long holds alone do not toggle.
 
 Underneath continuous phasing only passes downward while holding Sneak; ordinary gravity alone does not phase through floors. Phasing movement and one-block steps stop above the bottom of the world rather than entering the void.
+
+1.5.2: 6 always steps exactly one block in the selected direction, including into solid blocks or thick walls. No clear-space requirement. Repeat to keep moving through. Embedded players are protected from suffocation and client push-out until they exit, without automatically enabling continuous phasing. World limits and downward void protection remain.

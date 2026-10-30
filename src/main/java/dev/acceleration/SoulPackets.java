@@ -26,9 +26,9 @@ public final class SoulPackets {
         public static final StreamCodec<RegistryFriendlyByteBuf,State> CODEC=StreamCodec.composite(ByteBufCodecs.BOOL,State::active,State::new);
         @Override public Type<State> type(){return TYPE;}
     }
-    public record PhaseState(boolean active,int mode) implements CustomPacketPayload {
+    public record PhaseState(boolean active,int mode,boolean embedded) implements CustomPacketPayload {
         public static final Type<PhaseState> TYPE=new Type<>(AccelerationMod.id("phase_state"));
-        public static final StreamCodec<RegistryFriendlyByteBuf,PhaseState> CODEC=StreamCodec.composite(ByteBufCodecs.BOOL,PhaseState::active,ByteBufCodecs.VAR_INT,PhaseState::mode,PhaseState::new);
+        public static final StreamCodec<RegistryFriendlyByteBuf,PhaseState> CODEC=StreamCodec.composite(ByteBufCodecs.BOOL,PhaseState::active,ByteBufCodecs.VAR_INT,PhaseState::mode,ByteBufCodecs.BOOL,PhaseState::embedded,PhaseState::new);
         @Override public Type<PhaseState> type(){return TYPE;}
     }
     public static void initialize(){
