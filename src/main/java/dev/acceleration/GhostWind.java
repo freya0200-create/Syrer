@@ -12,6 +12,9 @@ public final class GhostWind {
                 return new Vec3(nativeImpulse.x,Math.max(0,nativeImpulse.y)+.5,nativeImpulse.z);
             return Vec3.ZERO; // Other explosions cannot touch a ghost; own wind boosts still work.
         }
+        if(source instanceof WindCharge charge&&charge.getOwner() instanceof ServerPlayer shooter
+                &&ProjectionPhysics.active(shooter)&&target!=shooter)
+            return Vec3.ZERO; // Ghost-fired blasts cannot push mobs, players, bodies or projectiles.
         return nativeImpulse;
     }
 }

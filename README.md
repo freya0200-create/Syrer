@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.4.5+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.4.6+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -83,4 +83,6 @@ Ghost Spear right-click strikes now pierce multiple entities in a narrow forward
 
 1.4.4: Mace hit reunion preserves smash fall-distance context until native item/enchantment effects execute, allowing Wind Burst to launch normally after body reunion.
 
-1.4.5: Hostile mobs acquire the visible linked body as a combat target within their normal follow range and line of sight while ignoring the ghost. Hits on the body still damage the owner without recall. Ghost-owned wind charges retain normal knockback against other entities.
+1.4.5: Hostile mobs acquire the visible linked body as a combat target within their normal follow range and line of sight while ignoring the ghost. Hits on the body still damage the owner without recall. Ghost-owned wind charges do not push other entities, including projectiles; self-launch remains enabled.
+
+1.4.6: While projected, your wind charges cannot push any other entity or projectile. Self wind-charge launches still stack. Normal body-mode wind charges keep vanilla knockback. Hostile mobs still hunt the linked body.

@@ -276,8 +276,17 @@ public final class AccelerationGameTests {
             var skeleton=c.spawn(EntityTypes.SKELETON,new BlockPos(5,2,5));skeleton.setNoAi(true);
             skeleton.setDeltaMovement(Vec3.ZERO);Vec3 before=skeleton.position();
             var charge=new SelfWindCharge(c.getLevel());charge.setOwner(owner);charge.burst(before.add(-.5,.1,0));
-            c.assertTrue(skeleton.getDeltaMovement().lengthSqr()>.001,"A real wind charge fired by the ghost must push a skeleton normally");
-            c.assertTrue(SoulMode.active(owner)&&!linked.isRemoved(),"Using wind charges must keep the ghost and linked body active");c.succeed();
+            c.assertTrue(skeleton.getDeltaMovement().lengthSqr()<1e-8,"A real ghost-fired wind charge must not push a skeleton");
+            c.assertTrue(SoulMode.active(owner)&&!linked.isRemoved(),"Using wind charges must keep the ghost and linked body active");
+            var cow=c.spawn(EntityTypes.COW,new BlockPos(3,2,3));
+            var arrow=EntityTypes.ARROW.create(c.getLevel(),EntitySpawnReason.COMMAND);
+            var pearl=EntityTypes.ENDER_PEARL.create(c.getLevel(),EntitySpawnReason.COMMAND);
+            var playerTarget=player(c);Vec3 impulse=new Vec3(.2,.5,-.1);
+            for(Entity target:List.of(skeleton,cow,arrow,pearl,playerTarget,linked))
+                c.assertTrue(GhostWind.impulse(charge,target,impulse).equals(Vec3.ZERO),"Ghost-fired wind must suppress knockback for every entity type including projectiles: "+target.getType());
+            SoulMode.finish(owner,owner.position());skeleton.setDeltaMovement(Vec3.ZERO);
+            var normalCharge=new SelfWindCharge(c.getLevel());normalCharge.setOwner(owner);normalCharge.burst(before.add(-.5,.1,0));
+            c.assertTrue(skeleton.getDeltaMovement().lengthSqr()>.001,"Normal body-mode wind charges must retain vanilla knockback");c.succeed();
         });
     }
 
