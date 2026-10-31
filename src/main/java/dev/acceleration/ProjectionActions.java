@@ -6,9 +6,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Items;
 public final class ProjectionActions {
     public static void initialize(){
-        AttackBlockCallback.EVENT.register((player,world,hand,pos,side)->{
-            if(player instanceof ServerPlayer actor&&SoulMode.active(actor)&&!player.getItemInHand(hand).is(AccelerationMod.SPEAR))SoulMode.finish(actor,actor.position());
-            return InteractionResult.PASS;
+        PlayerBlockBreakEvents.AFTER.register((world,player,pos,state,blockEntity)->{
+            if(player instanceof ServerPlayer actor&&SoulMode.active(actor))SoulMode.finish(actor,actor.position());
         });
         UseBlockCallback.EVENT.register((player,world,hand,hit)->{
             if(player instanceof ServerPlayer actor&&SoulMode.active(actor)&&!player.getItemInHand(hand).is(AccelerationMod.SPEAR)&&!player.getItemInHand(hand).has(DataComponents.FOOD)&&!player.getItemInHand(hand).is(Items.ENDER_PEARL)&&!player.getItemInHand(hand).is(Items.WIND_CHARGE))SoulMode.finish(actor,actor.position());

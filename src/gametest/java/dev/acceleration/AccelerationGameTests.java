@@ -45,6 +45,25 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:block_click_and_cancel_stay_ghost_until_successful_break")
+    public void blockClickAndCancelStayGhostUntilSuccessfulBreak(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 anchor=owner.position();
+        SoulMode.begin(owner,anchor);var linked=body(c,owner);Vec3 ghost=anchor.add(5,0,0);owner.setPos(ghost);
+        owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.DIAMOND_PICKAXE));
+        var pos=BlockPos.containing(ghost.add(1,0,0));c.getLevel().setBlockAndUpdate(pos,Blocks.STONE.defaultBlockState());
+        net.fabricmc.fabric.api.event.player.AttackBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,pos,Direction.UP);
+        c.assertTrue(SoulMode.active(owner)&&!linked.isRemoved(),"A single left click on stone must keep ghost mode and the original body");
+        owner.gameMode.handleBlockBreakAction(pos,net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,Direction.UP,c.getLevel().getMaxY(),0);
+        owner.gameMode.handleBlockBreakAction(pos,net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,Direction.UP,c.getLevel().getMaxY(),1);
+        c.assertTrue(SoulMode.active(owner)&&c.getLevel().getBlockState(pos).is(Blocks.STONE),"Starting and aborting native mining must not recall or break the block");
+        owner.setGameMode(GameType.ADVENTURE);
+        c.assertTrue(!owner.gameMode.destroyBlock(pos)&&SoulMode.active(owner),"A denied break must not recall the ghost");owner.setGameMode(GameType.SURVIVAL);
+        owner.setDeltaMovement(new Vec3(.3,.1,0));
+        c.assertTrue(owner.gameMode.destroyBlock(pos)&&c.getLevel().getBlockState(pos).isAir(),"Successful native block break must remove the stone");
+        c.assertTrue(!SoulMode.active(owner)&&linked.isRemoved()&&owner.position().distanceToSqr(ghost)<1e-8,"Only the completed break must reunite the body at the ghost position");
+        c.assertTrue(owner.getDeltaMovement().distanceToSqr(new Vec3(.3,.1,0))<1e-8,"Completed-break reunion must preserve momentum");c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:neutral_enderman_stays_calm_until_provoked")
     public void neutralEndermanStaysCalmUntilProvoked(GameTestHelper c){
         setup(c);var owner=player(c);var anchor=Vec3.atBottomCenterOf(c.absolutePos(new BlockPos(7,2,7)));
