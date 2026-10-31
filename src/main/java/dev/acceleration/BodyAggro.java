@@ -1,6 +1,5 @@
 package dev.acceleration;
 
-import java.util.Comparator;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -18,14 +17,25 @@ public final class BodyAggro {
         var current=mob.getTarget();
         if(current!=null&&current.isAlive()&&!ProjectionPhysics.active(current)&&!(current instanceof PlayerBody))return;
         double range=mob.getAttributeValue(Attributes.FOLLOW_RANGE);
-        var conditions=TargetingConditions.forCombat().range(range);
-        PlayerBody target=world.getEntitiesOfClass(PlayerBody.class,mob.getBoundingBox().inflate(range),body->{
-            var session=SoulState.get(world.getServer()).body(body.getUUID());
-            var owner=session==null?null:world.getServer().getPlayerList().getPlayer(session.owner());
-            return owner!=null&&owner.isAlive()&&!owner.isCreative()&&!owner.isSpectator()
-                &&(!(mob instanceof net.minecraft.world.entity.NeutralMob neutral)||neutral.isAngryAt(owner,world)||mob.getLastHurtByMob()==owner||current==body)
-                &&conditions.test(world,mob,body);
-        }).stream().min(Comparator.comparingDouble(mob::distanceToSqr)).orElse(null);
+        var state=SoulState.get(world.getServer());
+        TargetingConditions conditions=null;
+        net.minecraft.world.phys.AABB search=null;
+        PlayerBody target=null;double nearest=Double.POSITIVE_INFINITY;
+        // There can be at most one body per online player. Avoid scanning entity sections
+        // and constructing a list/stream for every hostile mob on every AI tick.
+        for(var owner:world.getServer().getPlayerList().getPlayers()){
+            var session=state.projection(owner.getUUID());
+            if(session==null||!session.dimension().equals(world.dimension())||!owner.isAlive()||owner.isCreative()||owner.isSpectator())continue;
+            var entity=world.getEntity(session.body());
+            if(!(entity instanceof PlayerBody body)||body.isRemoved())continue;
+            if(search==null)search=mob.getBoundingBox().inflate(range);
+            if(!search.intersects(body.getBoundingBox()))continue;
+            if(mob instanceof net.minecraft.world.entity.NeutralMob neutral&&!neutral.isAngryAt(owner,world)&&mob.getLastHurtByMob()!=owner&&current!=body)continue;
+            if(conditions==null)conditions=TargetingConditions.forCombat().range(range);
+            if(!conditions.test(world,mob,body))continue;
+            double distance=mob.distanceToSqr(body);
+            if(distance<nearest){nearest=distance;target=body;}
+        }
         if(target==null)return;
         mob.setTarget(target);
         var brain=mob.getBrain();

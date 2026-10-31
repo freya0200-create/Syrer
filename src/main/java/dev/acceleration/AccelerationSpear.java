@@ -12,9 +12,12 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.*;
 public final class AccelerationSpear extends Item {
     public static final net.minecraft.world.item.component.AttackRange CLOSE_RANGE=new net.minecraft.world.item.component.AttackRange(0,4.5F,0,6.5F,.125F,.5F);
+    private static final Component RED_NAME=Component.translatable("item.acceleration.acceleration_spear").withStyle(ChatFormatting.RED);
+    private static final net.minecraft.world.item.component.ItemAttributeModifiers COMBAT_ATTRIBUTES=createCombatAttributes();
     public AccelerationSpear(Properties properties){super(properties);}
-    private static Component redName(){return Component.translatable("item.acceleration.acceleration_spear").withStyle(ChatFormatting.RED);}
-    private static net.minecraft.world.item.component.ItemAttributeModifiers combatAttributes(){
+    private static Component redName(){return RED_NAME;}
+    private static net.minecraft.world.item.component.ItemAttributeModifiers combatAttributes(){return COMBAT_ATTRIBUTES;}
+    private static net.minecraft.world.item.component.ItemAttributeModifiers createCombatAttributes(){
         return net.minecraft.world.item.component.ItemAttributeModifiers.builder()
             .add(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE,new net.minecraft.world.entity.ai.attributes.AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID,ToolMaterial.DIAMOND.attackDamageBonus(),net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),net.minecraft.world.entity.EquipmentSlotGroup.MAINHAND)
             .add(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED,new net.minecraft.world.entity.ai.attributes.AttributeModifier(Item.BASE_ATTACK_SPEED_ID,0,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),net.minecraft.world.entity.EquipmentSlotGroup.MAINHAND)

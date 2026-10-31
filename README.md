@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.5.6+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.5.9+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -99,3 +99,5 @@ Ghost Spear right-click strikes now pierce multiple entities in a narrow forward
 OP commands (both /accleration and /acceleration): speed add <percent>, speed set <percent>, speed reset. 0 is normal Survival movement; 100 is +100% (double speed). Numeric values range from 0 to 1023900; set/add maximum also work. Commands stop and clear automatic acceleration so reset restores a zero bonus immediately. Press I again to resume automatic acceleration.
 
 1.5.6: Left-clicking a block or starting/cancelling mining keeps ghost mode active. Only a successful server-side block break reunites the body at the current ghost position, preserving momentum. Denied breaks do not recall.
+
+1.5.9 is a performance-only update based on 1.5.6. Gameplay, attack timings, input behavior, acceleration, ghost mechanics, phasing controls and speed commands are unchanged. It avoids repeated per-mob entity-section searches, indexes linked body ownership, reuses fixed item metadata, copies body equipment only when it changes, skips unchanged speed modifiers, and caches body skin-profile checks between updates. No guaranteed FPS or internet ping improvement is claimed.

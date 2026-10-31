@@ -45,6 +45,30 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:body_equipment_updates_preserve_counts_damage_and_owner_inventory")
+    public void bodyEquipmentUpdatesPreserveCountsDamageAndOwnerInventory(GameTestHelper c){
+        setup(c);var owner=player(c);SoulMode.begin(owner,owner.position());var linked=body(c,owner);
+        var helmet=new ItemStack(Items.DIAMOND_HELMET);helmet.setDamageValue(10);owner.setItemSlot(EquipmentSlot.HEAD,helmet);
+        owner.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.ENDER_PEARL,5));linked.tick();
+        c.assertTrue(linked.getItemBySlot(EquipmentSlot.HEAD).getDamageValue()==10&&linked.getItemBySlot(EquipmentSlot.OFFHAND).getCount()==5,"Body must immediately reflect changed equipment");
+        helmet.setDamageValue(20);owner.getOffhandItem().setCount(3);linked.tick();
+        c.assertTrue(linked.getItemBySlot(EquipmentSlot.HEAD).getDamageValue()==20&&linked.getItemBySlot(EquipmentSlot.OFFHAND).getCount()==3,"In-place durability and count changes must still sync on the next body tick");
+        linked.getOffhandItem().setCount(1);c.assertTrue(owner.getOffhandItem().getCount()==3,"Body equipment copies must never mutate the real inventory");
+        linked.tick();c.assertTrue(linked.getOffhandItem().getCount()==3,"Body must resync equipment after an independent change");c.succeed();
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:body_target_selection_keeps_nearest_and_retires_removed_body")
+    public void bodyTargetSelectionKeepsNearestAndRetiresRemovedBody(GameTestHelper c){
+        setup(c);var first=player(c);var second=player(c);Vec3 anchor=first.position();second.setPos(anchor.add(8,0,0));
+        for(int x=-1;x<=9;x++)for(int y=0;y<4;y++)for(int z=-1;z<=1;z++)
+            c.getLevel().setBlockAndUpdate(BlockPos.containing(anchor).offset(x,y,z),Blocks.AIR.defaultBlockState());
+        SoulMode.begin(first,anchor);var firstBody=body(c,first);first.setPos(anchor.add(0,5,0));
+        SoulMode.begin(second,second.position());var secondBody=body(c,second);second.setPos(second.position().add(0,5,0));
+        var zombie=c.spawn(EntityTypes.ZOMBIE,new BlockPos(3,2,2));BodyAggro.targetBody(zombie);
+        c.assertTrue(zombie.getTarget()==firstBody,"Mob must choose the nearest eligible linked body");
+        SoulMode.finish(first,first.position());BodyAggro.targetBody(zombie);
+        c.assertTrue(zombie.getTarget()==secondBody,"Mob must stop targeting a retired body and acquire the remaining eligible one; actual="+zombie.getTarget()+", remaining="+secondBody+", active="+SoulMode.active(second)+", distance="+zombie.distanceTo(secondBody)+", condition="+net.minecraft.world.entity.ai.targeting.TargetingConditions.forCombat().range(zombie.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE)).test(c.getLevel(),zombie,secondBody));c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:block_click_and_cancel_stay_ghost_until_successful_break")
     public void blockClickAndCancelStayGhostUntilSuccessfulBreak(GameTestHelper c){
         setup(c);var owner=player(c);Vec3 anchor=owner.position();
@@ -319,7 +343,10 @@ public final class AccelerationGameTests {
     public void projectionRecoveryStateSurvivesSerialization(GameTestHelper c){
         setup(c);var p=player(c);var origin=p.position();SoulMode.begin(p,origin);
         var state=SoulState.get(c.getLevel().getServer());var encoded=SoulState.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE,state).getOrThrow();
-        var restored=SoulState.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,encoded).getOrThrow().projection(p.getUUID());
+        var decoded=SoulState.CODEC.parse(com.mojang.serialization.JsonOps.INSTANCE,encoded).getOrThrow();
+        var restored=decoded.projection(p.getUUID());
+        c.assertTrue(decoded.body(restored.body())==restored,"Saved body ownership must restore correctly for damage forwarding");
+        decoded.remove(p.getUUID());c.assertTrue(decoded.body(restored.body())==null,"Retired body ownership must be removed after recovery");
         c.assertTrue(restored!=null&&restored.anchor().distanceToSqr(origin)<1e-8&&restored.mode()==GameType.SURVIVAL&&!restored.abilities().mayFly(),"Crash-recovery snapshot must preserve exact body anchor, original mode and abilities");
         c.assertTrue(SoulMode.finish(p,null)&&p.gameMode()==GameType.SURVIVAL&&!p.getAbilities().invulnerable,"Reconnect/stop recovery path must restore normal play");c.succeed();
     }
