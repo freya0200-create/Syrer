@@ -45,6 +45,30 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_knockback_only_contact_always_strikes")
+    public void ghostKnockbackOnlyContactAlwaysStrikes(GameTestHelper c){
+        setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(0,0,3.5));
+        target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        boolean hit=owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false);
+        c.assertTrue(hit&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Knockback-only contact must apply maximum ghost damage and pop exactly one totem");
+        c.assertTrue(!SoulMode.active(owner),"Successful contact must reunite body");owner.stopUsingItem();
+        var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(0,0,3));c.getLevel().addFreshEntity(golem);
+        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,golem,0,false,true,false)&&golem.isDeadOrDying()&&!SoulMode.active(owner),"Zero-base-damage shove contact must kill ordinary targets and reunite");owner.stopUsingItem();c.succeed();
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_cramped_landing_still_strikes")
+    public void ghostCrampedLandingStillStrikes(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 origin=owner.position();
+        var stand=new StrikeStand(c.getLevel());stand.setPos(origin.add(2,0,0));c.getLevel().addFreshEntity(stand);
+        for(Vec3 offset:List.of(new Vec3(1.6,0,0),new Vec3(-1.6,0,0),new Vec3(0,0,1.6),new Vec3(0,0,-1.6),new Vec3(0,1,0))){
+            var pos=BlockPos.containing(stand.position().add(offset));c.getLevel().setBlockAndUpdate(pos,Blocks.STONE.defaultBlockState());c.getLevel().setBlockAndUpdate(pos.above(),Blocks.STONE.defaultBlockState());
+        }
+        SoulMode.begin(owner,origin);
+        c.assertTrue(SoulMode.strike(owner,stand)&&stand.isRemoved()&&!SoulMode.active(owner),"Blocked landing offsets must not cancel a valid hit or leave the body behind");
+        c.assertTrue(owner.position().distanceToSqr(origin)<1e-8,"No landing space must reunite at attack position");c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:phasing_accepts_real_movement_packets")
     public void phasingAcceptsRealMovementPackets(GameTestHelper c){
         setup(c);var owner=player(c);var start=owner.position();

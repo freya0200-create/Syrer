@@ -167,7 +167,7 @@ public final class SoulMode {
         if(!active(player)||STRIKING.contains(player.getUUID())||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
                 ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinEntityInteractionRange(clicked,0)))return false;
         ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
-        if(destination==null){player.sendOverlayMessage(Component.literal("No clear landing space beside that target."));return false;}
+        if(destination==null)destination=player.position(); // Cramped landing must not cancel a valid hit.
         // Collect the narrow forward thrust before any damage, teleport or entity removal.
         Vec3 start=player.getEyePosition();
         var targetBox=clicked.getBoundingBox();

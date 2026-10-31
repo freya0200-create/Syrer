@@ -23,7 +23,8 @@
     "DragonTargetAccess",
     "FreeSpearAttackMixin",
     "BlockPhasingMixin",
-    "PhasingMovementMixin"
+    "PhasingMovementMixin",
+    "GhostJoustMixin"
   ],
   "injectors": {
     "defaultRequire": 1
