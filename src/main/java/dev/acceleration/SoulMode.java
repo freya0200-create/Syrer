@@ -68,6 +68,7 @@ public final class SoulMode {
                 ||(!fromKey&&!player.getMainHandItem().is(AccelerationMod.SPEAR))||!AccelerationMod.carrying(player)
                 ||player.getCooldowns().isOnCooldown(new net.minecraft.world.item.ItemStack(AccelerationMod.SPEAR))||player.isPassenger())return false;
         HIT_RETURNS.remove(player.getUUID());
+        GhostSpearInput.forget(player);
         player.gameMode().updatePlayerAbilities(player.getAbilities());
         ServerLevel world=player.level();
         PlayerBody body=AccelerationMod.BODY.create(world,EntitySpawnReason.EVENT);if(body==null)return false;
@@ -96,6 +97,7 @@ public final class SoulMode {
     }
     /** Null destination returns to the original body; a strike commits the player at the target. */
     public static boolean finish(ServerPlayer player,Vec3 destination){
+        GhostSpearInput.forget(player);
         var state=SoulState.get(player.level().getServer());var session=state.projection(player.getUUID());if(session==null)return false;
         state.remove(player.getUUID());LUNGE_RETURNS.remove(player.getUUID());
         for(ServerLevel world:player.level().getServer().getAllLevels()){
@@ -155,8 +157,8 @@ public final class SoulMode {
     }
     public static boolean ghostJoustHit(Entity target,DamageSource source){
         return source.getEntity() instanceof ServerPlayer actor&&source.getDirectEntity()==actor
-            &&active(actor)&&actor.isUsingItem()&&actor.getMainHandItem().is(AccelerationMod.SPEAR)
-            &&actor.getUseItem().is(AccelerationMod.SPEAR)&&!ownBody(actor,target);
+            &&active(actor)&&actor.getMainHandItem().is(AccelerationMod.SPEAR)
+            &&(actor.isUsingItem()&&actor.getUseItem().is(AccelerationMod.SPEAR)||GhostSpearInput.recent(actor))&&!ownBody(actor,target);
     }
     public static boolean strikeFromJoust(ServerPlayer player,Entity clicked){return strike(player,clicked,true);}
     public static boolean strike(ServerPlayer player,Entity clicked){return strike(player,clicked,false);}

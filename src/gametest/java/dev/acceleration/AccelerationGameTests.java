@@ -45,6 +45,34 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:quick_right_release_left_uses_instant_strike_and_dash")
+    public void quickRightReleaseLeftUsesInstantStrikeAndDash(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 origin=owner.position();var stand=new StrikeStand(c.getLevel());stand.setPos(origin.add(2,0,0));c.getLevel().addFreshEntity(stand);
+        SoulMode.begin(owner,origin);var linked=body(c,owner);
+        net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND);
+        owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);owner.stopUsingItem();
+        c.assertTrue(!owner.isUsingItem()&&GhostSpearInput.recent(owner),"Quick right release must preserve the pending special strike");
+        owner.attack(stand);
+        c.assertTrue(stand.received==Float.MAX_VALUE&&stand.isRemoved()&&stand.projectedAtDamage,"Immediate left attack must use maximum right-click strike damage while still projected");
+        c.assertTrue(!SoulMode.active(owner)&&linked.isRemoved()&&owner.position().distanceToSqr(origin)>.1&&!GhostSpearInput.recent(owner),"The special strike must dash/reunite once and consume the input buffer");
+        var target=player(c);target.setPos(owner.position().add(0,0,2));target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        SoulMode.begin(owner,owner.position());
+        net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND);
+        owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);owner.stopUsingItem();
+        c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,1,true,true,false)&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner),"Released-right then native left jab must also pop exactly one totem and reunite");c.succeed();
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:right_click_buffer_expires_and_plain_left_stays_normal")
+    public void rightClickBufferExpiresAndPlainLeftStaysNormal(GameTestHelper c){
+        setup(c);var owner=player(c);GhostSpearInput.arm(owner);c.assertTrue(!GhostSpearInput.recent(owner),"Body-mode clicks must not arm a ghost strike");
+        SoulMode.begin(owner,owner.position());
+        net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND);
+        c.runAtTickTime(10,()->{
+            c.assertTrue(!GhostSpearInput.recent(owner),"Old right click must expire instead of converting later left clicks");
+            var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(0,0,2));c.getLevel().addFreshEntity(golem);
+            owner.attack(golem);c.assertTrue(golem.isAlive()&&golem.getHealth()>0&&SoulMode.active(owner),"A plain late left click must remain a normal jab rather than the instant right-click strike");c.succeed();
+        });
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:block_click_and_cancel_stay_ghost_until_successful_break")
     public void blockClickAndCancelStayGhostUntilSuccessfulBreak(GameTestHelper c){
         setup(c);var owner=player(c);Vec3 anchor=owner.position();

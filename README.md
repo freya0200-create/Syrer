@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.5.6+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.5.7+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -99,3 +99,5 @@ Ghost Spear right-click strikes now pierce multiple entities in a narrow forward
 OP commands (both /accleration and /acceleration): speed add <percent>, speed set <percent>, speed reset. 0 is normal Survival movement; 100 is +100% (double speed). Numeric values range from 0 to 1023900; set/add maximum also work. Commands stop and clear automatic acceleration so reset restores a zero bonus immediately. Press I again to resume automatic acceleration.
 
 1.5.6: Left-clicking a block or starting/cancelling mining keeps ghost mode active. Only a successful server-side block break reunites the body at the current ghost position, preserving momentum. Denied breaks do not recall.
+
+1.5.7: In ghost mode, a right-click spear input is remembered for six server ticks (0.3 seconds). A quick release followed immediately by a left-click hit uses the maximum-damage right-click strike and its dash/reunion, rather than falling back to an ordinary jab. Held right-click contacts use the same strike. The intent expires, clears on reunion, and requires the Ghost Spear to remain held.
