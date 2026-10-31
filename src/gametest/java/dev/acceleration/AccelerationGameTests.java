@@ -45,6 +45,20 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:point_blank_ghost_spear_strikes_without_minimum_range")
+    public void pointBlankGhostSpearStrikesWithoutMinimumRange(GameTestHelper c){
+        setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(.25,0,0));
+        var range=owner.getMainHandItem().get(DataComponents.ATTACK_RANGE);
+        c.assertTrue(range.minReach()==0&&range.minCreativeReach()==0&&range.maxReach()==4.5F&&range.maxCreativeReach()==6.5F,"Only the minimum spear reach must change to zero");
+        c.assertTrue(owner.isWithinAttackRange(owner.getMainHandItem(),target.getBoundingBox(),0),"Overlapping point-blank target must be within native attack range");
+        target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner),"Point-blank native right-click contact must pop one totem and reunite");owner.stopUsingItem();
+        var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(.4,0,0));c.getLevel().addFreshEntity(golem);
+        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,golem,0,false,true,false)&&golem.isDeadOrDying()&&!SoulMode.active(owner),"Point-blank ghost spear must kill an ordinary target and reunite");owner.stopUsingItem();c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_knockback_only_contact_always_strikes")
     public void ghostKnockbackOnlyContactAlwaysStrikes(GameTestHelper c){
         setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(0,0,3.5));

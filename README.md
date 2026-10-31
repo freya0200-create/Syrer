@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.5.3+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.5.4+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -92,3 +92,5 @@ Ghost Spear right-click strikes now pierce multiple entities in a narrow forward
 1.5.0: Press 6 to toggle phasing while carrying the Ghost Spear. Press 7 to cycle Wall Phasing (sideways), Underneath Blocks Phasing (down through floors), and On Top of Blocks Phasing (up through ceilings). Mode changes work while on or off and do not change ghost/body mode. No flight is granted. Turning off finds nearby open space or your last clear position. Both keys are rebindable in Controls; their vanilla hotbar slot selection also remains.
 
 1.5.3 is based on 1.5.0: 6 toggles continuous phasing and 7 cycles modes. Ghost right-click contacts now use the special strike even when vanilla marks them knockback-only. Cramped landing space no longer cancels damage: the body reunites at the current attack position instead. Totems and PvP protection still apply.
+
+1.5.4: Ghost Spear minimum reach is zero in Survival and Creative. Close right-click ghost strikes work at point-blank range, with maximum reach unchanged (4.5 Survival / 6.5 Creative). Existing inventory spears receive the updated range automatically.
