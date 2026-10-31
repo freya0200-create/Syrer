@@ -45,6 +45,49 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:neutral_enderman_stays_calm_until_provoked")
+    public void neutralEndermanStaysCalmUntilProvoked(GameTestHelper c){
+        setup(c);var owner=player(c);var anchor=Vec3.atBottomCenterOf(c.absolutePos(new BlockPos(7,2,7)));
+        owner.setPos(anchor);var enderman=c.spawn(EntityTypes.ENDERMAN,new BlockPos(4,2,7));
+        SoulMode.begin(owner,anchor);var linked=body(c,owner);owner.setPos(anchor.add(0,5,0));
+        BodyAggro.targetBody(enderman);c.assertTrue(enderman.getTarget()==null,"Entering projection must not make a calm Enderman attack the body");
+        c.runAtTickTime(20,()->{
+            c.assertTrue(enderman.getTarget()==null,"Unprovoked Enderman must remain calm during ghost mode");
+            enderman.setLastHurtByMob(owner);enderman.setPersistentAngerTarget(net.minecraft.world.entity.EntityReference.of(owner));enderman.setTimeToRemainAngry(1000);
+            BodyAggro.targetBody(enderman);c.assertTrue(enderman.getTarget()==linked,"An already provoked Enderman must still be allowed to attack the linked body");c.succeed();
+        });
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:speed_commands_set_add_reset_and_maximum")
+    public void speedCommandsSetAddResetAndMaximum(GameTestHelper c){
+        setup(c);var owner=player(c);var server=c.getLevel().getServer();
+        var source=server.createCommandSourceStack().withEntity(owner);
+        double base=owner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        try{
+            var dispatcher=server.getCommands().getDispatcher();
+            dispatcher.execute("accleration speed set 100",source);
+            c.assertTrue(Math.abs(SpeedCommands.value(owner)-100)<1e-6&&Math.abs(owner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)-base*2)<1e-6,"set 100 must double normal movement speed");
+            dispatcher.execute("accleration speed add 50",source);c.assertTrue(SpeedCommands.value(owner)==150,"add must increase the configured percent");
+            dispatcher.execute("acceleration speed reset",source);
+            c.assertTrue(SpeedCommands.value(owner)==0&&!AccelerationMod.accelerationEnabled(owner)&&AccelerationMod.charge(owner)==0&&Math.abs(owner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)-base)<1e-6,"reset alias must restore zero bonus and clear acceleration");
+            dispatcher.execute("accleration speed set maximum",source);dispatcher.execute("accleration speed add 100",source);
+            c.assertTrue(SpeedCommands.value(owner)==SpeedCommands.MAX_PERCENT&&Double.isFinite(owner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED)),"Maximum speed must saturate without overflow");
+            dispatcher.execute("accleration speed set 0",source);c.assertTrue(SpeedCommands.value(owner)==0,"set 0 must also restore base speed");
+        }catch(com.mojang.brigadier.exceptions.CommandSyntaxException error){throw new RuntimeException(error);}
+        c.succeed();
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:held_spear_right_click_reaches_four_point_five_blocks")
+    public void heldSpearRightClickReachesFourPointFiveBlocks(GameTestHelper c){
+        setup(c);var owner=player(c);
+        c.runAtTickTime(5,()->{
+            owner.doTick();
+            c.assertTrue(Math.abs(owner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ENTITY_INTERACTION_RANGE)-4.5)<1e-6,"Holding Ghost Spear must increase actual server entity interaction reach to 4.5, got "+owner.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ENTITY_INTERACTION_RANGE));
+            var stand=new StrikeStand(c.getLevel());stand.setPos(owner.position().add(4.4,0,0));c.getLevel().addFreshEntity(stand);
+            SoulMode.begin(owner,owner.position());
+            c.assertTrue(owner.isWithinEntityInteractionRange(stand,0),"Native server interaction validation must accept the extended reach");
+            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,stand,null)==net.minecraft.world.InteractionResult.SUCCESS&&stand.isRemoved()&&!SoulMode.active(owner),"Direct right click beyond three blocks must hit and reunite");c.succeed();
+        });
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:point_blank_ghost_spear_strikes_without_minimum_range")
     public void pointBlankGhostSpearStrikesWithoutMinimumRange(GameTestHelper c){
         setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(.25,0,0));
@@ -136,7 +179,7 @@ public final class AccelerationGameTests {
         c.assertTrue(stack.getMaxDamage()==Items.DIAMOND_SPEAR.getDefaultInstance().getMaxDamage(),"Spear must use diamond durability, not netherite");
         var modifiers=stack.get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers();
         var speed=modifiers.stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED)).findFirst().orElseThrow();
-        c.assertTrue(Math.abs(4+speed.modifier().amount()-2)<1e-6,"Held spear must have 2 attacks per second: half-second cooldown");
+        c.assertTrue(Math.abs(4+speed.modifier().amount()-4)<1e-6,"Held spear must have 4 attacks per second: quarter-second cooldown");
         var damage=modifiers.stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)).findFirst().orElseThrow();
         var vanillaDamage=Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)).findFirst().orElseThrow();
         c.assertTrue(damage.equals(vanillaDamage),"Faster spear must retain diamond attack damage");

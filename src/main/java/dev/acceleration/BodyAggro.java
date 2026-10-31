@@ -23,6 +23,7 @@ public final class BodyAggro {
             var session=SoulState.get(world.getServer()).body(body.getUUID());
             var owner=session==null?null:world.getServer().getPlayerList().getPlayer(session.owner());
             return owner!=null&&owner.isAlive()&&!owner.isCreative()&&!owner.isSpectator()
+                &&(!(mob instanceof net.minecraft.world.entity.NeutralMob neutral)||neutral.isAngryAt(owner,world)||mob.getLastHurtByMob()==owner||current==body)
                 &&conditions.test(world,mob,body);
         }).stream().min(Comparator.comparingDouble(mob::distanceToSqr)).orElse(null);
         if(target==null)return;

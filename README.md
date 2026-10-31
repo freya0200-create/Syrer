@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.5.4+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.5.5+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -94,3 +94,6 @@ Ghost Spear right-click strikes now pierce multiple entities in a narrow forward
 1.5.3 is based on 1.5.0: 6 toggles continuous phasing and 7 cycles modes. Ghost right-click contacts now use the special strike even when vanilla marks them knockback-only. Cramped landing space no longer cancels damage: the body reunites at the current attack position instead. Totems and PvP protection still apply.
 
 1.5.4: Ghost Spear minimum reach is zero in Survival and Creative. Close right-click ghost strikes work at point-blank range, with maximum reach unchanged (4.5 Survival / 6.5 Creative). Existing inventory spears receive the updated range automatically.
+
+1.5.5: Ghost Spear recharge is 0.25 seconds (4 attacks/second) and holding it adds 1.5 blocks of entity interaction reach, bringing normal Survival right-click reach to 4.5 blocks. Minimum reach remains zero. Neutral mobs such as Endermen do not automatically aggro on the body unless already angry at or provoked by its owner.
+OP commands (both /accleration and /acceleration): speed add <percent>, speed set <percent>, speed reset. 0 is normal Survival movement; 100 is +100% (double speed). Numeric values range from 0 to 1023900; set/add maximum also work. Commands stop and clear automatic acceleration so reset restores a zero bonus immediately. Press I again to resume automatic acceleration.

@@ -33,6 +33,7 @@ public final class AccelerationMod implements ModInitializer {
         if(!player.isAlive()||player.isSpectator()||!carrying(player))return false;
         ENABLED.add(player.getUUID());player.sendOverlayMessage(Component.literal("Acceleration ON • +12% per second while sprinting"));return true;
     }
+    public static void clearAcceleration(ServerPlayer player){ENABLED.remove(player.getUUID());CHARGE.remove(player.getUUID());player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(SPEED);}
     public static boolean carrying(ServerPlayer player){
         for(int slot=0;slot<player.getInventory().getContainerSize();slot++)if(player.getInventory().getItem(slot).is(SPEAR))return true;
         return false;
@@ -52,6 +53,7 @@ public final class AccelerationMod implements ModInitializer {
         ProjectionActions.initialize();
         net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry.register(BODY,net.minecraft.world.entity.LivingEntity.createLivingAttributes());
         SoulPackets.initialize();
+        SpeedCommands.initialize();
         AscendedDragon.initialize();
         net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player,world,hand,target,hit)->
             ProjectionPhysics.active(target)?net.minecraft.world.InteractionResult.FAIL:net.minecraft.world.InteractionResult.PASS);

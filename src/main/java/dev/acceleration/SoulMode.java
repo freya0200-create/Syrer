@@ -162,10 +162,10 @@ public final class SoulMode {
     public static boolean strike(ServerPlayer player,Entity clicked){return strike(player,clicked,false);}
     private static boolean strike(ServerPlayer player,Entity clicked,boolean jousting){
         if(active(player)&&ownBody(player,clicked)&&player.getMainHandItem().is(AccelerationMod.SPEAR)
-                &&player.isWithinEntityInteractionRange(clicked,0))return finish(player,null);
+                &&player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0))return finish(player,null);
         Entity victim=clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:clicked;
         if(!active(player)||STRIKING.contains(player.getUUID())||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
-                ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinEntityInteractionRange(clicked,0)))return false;
+                ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0)))return false;
         ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
         if(destination==null)destination=player.position(); // Cramped landing must not cancel a valid hit.
         // Collect the narrow forward thrust before any damage, teleport or entity removal.
