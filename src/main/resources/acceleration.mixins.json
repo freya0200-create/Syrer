@@ -24,7 +24,8 @@
     "FreeSpearAttackMixin",
     "BlockPhasingMixin",
     "PhasingMovementMixin",
-    "GhostJoustMixin"
+    "GhostJoustMixin",
+    "SpearDensityMixin"
   ],
   "injectors": {
     "defaultRequire": 1

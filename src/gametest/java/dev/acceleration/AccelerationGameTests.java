@@ -45,6 +45,51 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    private void chargeSpear(ServerPlayer player){
+        player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        if(!SoulMode.active(player)||!player.getMainHandItem().is(AccelerationMod.SPEAR))return;
+        try{
+            var remaining=LivingEntity.class.getDeclaredField("useItemRemaining");remaining.setAccessible(true);
+            int delay=player.getMainHandItem().get(DataComponents.KINETIC_WEAPON).delayTicks();
+            remaining.setInt(player,player.getUseItem().getUseDuration(player)-delay);
+        }catch(ReflectiveOperationException error){throw new RuntimeException(error);}
+    }
+    private boolean chargedStrike(ServerPlayer player,Entity target){if(SoulMode.active(player))chargeSpear(player);return SoulMode.strike(player,target);}
+    private net.minecraft.world.InteractionResult chargedInteract(ServerPlayer player,net.minecraft.world.level.Level world,net.minecraft.world.InteractionHand hand,Entity target,net.minecraft.world.phys.EntityHitResult hit){
+        if(SoulMode.active(player)&&player.getMainHandItem().is(AccelerationMod.SPEAR)&&!SoulMode.ownBody(player,target))chargeSpear(player);
+        return net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(player,world,hand,target,hit);
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_spear_requires_full_charge_and_taps_do_no_damage")
+    public void ghostSpearRequiresFullChargeAndTapsDoNoDamage(GameTestHelper c){
+        setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(2,0,0));
+        target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        SoulMode.begin(owner,owner.position());var linked=body(c,owner);
+        net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null);
+        c.assertTrue(owner.isUsingItem()&&!SpearCharge.ready(owner)&&target.getHealth()==20&&SoulMode.active(owner),"A quick right click on an entity must start charging without damage or reunion");
+        c.assertTrue(!owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.getHealth()==20&&!linked.isRemoved(),"Uncharged contact must not deal instant damage or knock the target");
+        for(int i=0;i<9;i++)owner.doTick();
+        c.assertTrue(!SpearCharge.ready(owner)&&!SoulMode.strike(owner,target)&&target.getHealth()==20,"Nine charge ticks must not unlock the instant strike");
+        owner.stopUsingItem();owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        c.assertTrue(!SpearCharge.ready(owner),"Releasing and re-pressing must restart the charge");
+        for(int i=0;i<10;i++)owner.doTick();
+        c.assertTrue(SpearCharge.ready(owner),"Ten actual native player ticks must fully charge the spear");
+        Vec3 position=owner.position();
+        c.assertTrue(SoulMode.strike(owner,target)&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner)&&linked.isRemoved(),"A fully charged hit must pop one totem and return the body");
+        c.assertTrue(owner.position().distanceToSqr(position)<1e-8,"Full-charge strike must retain smooth in-place reunion");c.succeed();
+    }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_spear_has_density_and_breach_with_real_effects")
+    public void ghostSpearHasDensityAndBreachWithRealEffects(GameTestHelper c){
+        setup(c);var owner=player(c);var stack=owner.getMainHandItem();var registry=c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        c.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.DENSITY),stack)==5&&EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.BREACH),stack)==4,"New Ghost Spear must have Density V and Breach IV together");
+        var old=new ItemStack(AccelerationMod.SPEAR);AccelerationMod.SPEAR.inventoryTick(old,c.getLevel(),owner,EquipmentSlot.MAINHAND);
+        c.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.DENSITY),old)==5&&EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.BREACH),old)==4,"Existing spear must receive both enchantments");
+        var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(2,0,0));c.getLevel().addFreshEntity(golem);
+        owner.fallDistance=6;owner.setOnGround(false);var source=c.getLevel().damageSources().playerAttack(owner);
+        c.assertTrue(Math.abs(SpearDensity.bonus(owner,golem,source)-15)<1e-6,"Density V must add 2.5 damage per fallen block");
+        c.assertTrue(Math.abs(EnchantmentHelper.modifyArmorEffectiveness(c.getLevel(),stack,golem,source,1)-.4)<1e-5,"Breach IV must reduce armor effectiveness by sixty percent");
+        owner.fallDistance=0;c.assertTrue(SpearDensity.bonus(owner,golem,source)==0,"Grounded spear hits must not gain Density fall damage");c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_spear_fire_aspect_and_flame_survive_reunion")
     public void ghostSpearFireAspectAndFlameSurviveReunion(GameTestHelper c){
         setup(c);var owner=player(c);var target=player(c);var registry=c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
@@ -52,11 +97,11 @@ public final class AccelerationGameTests {
         var aspect=new ItemStack(AccelerationMod.SPEAR);aspect.enchant(registry.getOrThrow(Enchantments.FIRE_ASPECT),2);
         owner.setItemSlot(EquipmentSlot.MAINHAND,aspect);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
         SoulMode.begin(owner,owner.position());Vec3 origin=owner.position();
-        c.assertTrue(SoulMode.strike(owner,target)&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Fire Aspect hit must still pop exactly one totem");
+        c.assertTrue(chargedStrike(owner,target)&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Fire Aspect hit must still pop exactly one totem");
         c.assertTrue(target.getRemainingFireTicks()>=160&&!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-8,"Fire Aspect II must ignite for eight seconds after the totem and smooth reunion");
         target.clearFire();target.removeAllEffects();target.setHealth(20);target.invulnerableTime=0;target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
         var flame=new ItemStack(AccelerationMod.SPEAR);flame.enchant(registry.getOrThrow(Enchantments.FLAME),1);owner.setItemSlot(EquipmentSlot.MAINHAND,flame);
-        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        SoulMode.begin(owner,owner.position());chargeSpear(owner);
         c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Flame native right-click contact must still activate one totem");
         c.assertTrue(target.getRemainingFireTicks()>=100&&!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-8,"Flame must ignite for five seconds after reunion without a dash");owner.stopUsingItem();
         c.succeed();
@@ -69,12 +114,12 @@ public final class AccelerationGameTests {
         SoulMode.begin(owner,origin);var linked=body(c,owner);owner.setDeltaMovement(velocity);owner.setYRot(35);owner.setXRot(-10);
         try{
             var counter=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("awaitingTeleport");counter.setAccessible(true);int before=counter.getInt(owner.connection);
-            c.assertTrue(SoulMode.strike(owner,stand)&&stand.received==Float.MAX_VALUE&&stand.isRemoved(),"Smooth strike must still deal maximum damage");
+            c.assertTrue(chargedStrike(owner,stand)&&stand.received==Float.MAX_VALUE&&stand.isRemoved(),"Smooth strike must still deal maximum damage");
             c.assertTrue(!SoulMode.active(owner)&&linked.isRemoved()&&owner.position().distanceToSqr(origin)<1e-10,"Special strike must reunite without dashing or repositioning");
             c.assertTrue(counter.getInt(owner.connection)==before,"In-place reunion must not send a teleport correction to the client");
             c.assertTrue(owner.getDeltaMovement().distanceToSqr(velocity)<1e-10&&owner.getYRot()==35&&owner.getXRot()==-10,"Strike must preserve camera angles and existing movement");
             var target=player(c);target.setPos(origin.add(0,0,3.5));target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
-            SoulMode.begin(owner,origin);owner.setDeltaMovement(velocity);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);before=counter.getInt(owner.connection);
+            SoulMode.begin(owner,origin);owner.setDeltaMovement(velocity);chargeSpear(owner);before=counter.getInt(owner.connection);
             c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Native right-click contact must still pop one totem");
             c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-10&&counter.getInt(owner.connection)==before&&owner.getDeltaMovement().distanceToSqr(velocity)<1e-10,"Native right-click must also reunite smoothly without a teleport or velocity kick");owner.stopUsingItem();
         }catch(ReflectiveOperationException error){throw new RuntimeException(error);}
@@ -163,7 +208,7 @@ public final class AccelerationGameTests {
             var stand=new StrikeStand(c.getLevel());stand.setPos(owner.position().add(4.4,0,0));c.getLevel().addFreshEntity(stand);
             SoulMode.begin(owner,owner.position());
             c.assertTrue(owner.isWithinEntityInteractionRange(stand,0),"Native server interaction validation must accept the extended reach");
-            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,stand,null)==net.minecraft.world.InteractionResult.SUCCESS&&stand.isRemoved()&&!SoulMode.active(owner),"Direct right click beyond three blocks must hit and reunite");c.succeed();
+            c.assertTrue(chargedInteract(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,stand,null)==net.minecraft.world.InteractionResult.SUCCESS&&stand.isRemoved()&&!SoulMode.active(owner),"Direct right click beyond three blocks must hit and reunite");c.succeed();
         });
     }
 
@@ -174,10 +219,10 @@ public final class AccelerationGameTests {
         c.assertTrue(range.minReach()==0&&range.minCreativeReach()==0&&range.maxReach()==4.5F&&range.maxCreativeReach()==6.5F,"Only the minimum spear reach must change to zero");
         c.assertTrue(owner.isWithinAttackRange(owner.getMainHandItem(),target.getBoundingBox(),0),"Overlapping point-blank target must be within native attack range");
         target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
-        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        SoulMode.begin(owner,owner.position());chargeSpear(owner);
         c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner),"Point-blank native right-click contact must pop one totem and reunite");owner.stopUsingItem();
         var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(.4,0,0));c.getLevel().addFreshEntity(golem);
-        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        SoulMode.begin(owner,owner.position());chargeSpear(owner);
         c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,golem,0,false,true,false)&&golem.isDeadOrDying()&&!SoulMode.active(owner),"Point-blank ghost spear must kill an ordinary target and reunite");owner.stopUsingItem();c.succeed();
     }
 
@@ -185,12 +230,12 @@ public final class AccelerationGameTests {
     public void ghostKnockbackOnlyContactAlwaysStrikes(GameTestHelper c){
         setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(0,0,3.5));
         target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
-        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        SoulMode.begin(owner,owner.position());chargeSpear(owner);
         boolean hit=owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false);
         c.assertTrue(hit&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Knockback-only contact must apply maximum ghost damage and pop exactly one totem");
         c.assertTrue(!SoulMode.active(owner),"Successful contact must reunite body");owner.stopUsingItem();
         var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(0,0,3));c.getLevel().addFreshEntity(golem);
-        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        SoulMode.begin(owner,owner.position());chargeSpear(owner);
         c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,golem,0,false,true,false)&&golem.isDeadOrDying()&&!SoulMode.active(owner),"Zero-base-damage shove contact must kill ordinary targets and reunite");owner.stopUsingItem();c.succeed();
     }
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_cramped_landing_still_strikes")
@@ -201,7 +246,7 @@ public final class AccelerationGameTests {
             var pos=BlockPos.containing(stand.position().add(offset));c.getLevel().setBlockAndUpdate(pos,Blocks.STONE.defaultBlockState());c.getLevel().setBlockAndUpdate(pos.above(),Blocks.STONE.defaultBlockState());
         }
         SoulMode.begin(owner,origin);
-        c.assertTrue(SoulMode.strike(owner,stand)&&stand.isRemoved()&&!SoulMode.active(owner),"Blocked landing offsets must not cancel a valid hit or leave the body behind");
+        c.assertTrue(chargedStrike(owner,stand)&&stand.isRemoved()&&!SoulMode.active(owner),"Blocked landing offsets must not cancel a valid hit or leave the body behind");
         c.assertTrue(owner.position().distanceToSqr(origin)<1e-8,"No landing space must reunite at attack position");c.succeed();
     }
 
@@ -304,12 +349,12 @@ public final class AccelerationGameTests {
             Vec3 launch=actor.position();c.assertTrue(SoulMode.begin(actor,launch),"Projection must begin");
             var body=body(c,actor);actor.setYRot(-90);actor.setXRot(0);
             Vec3 nearby=target.position();target.setPos(launch.add(7,0,0));
-            c.assertTrue(!SoulMode.strike(actor,target)&&SoulMode.active(actor),"Right-click strike must require normal interaction reach, not remote aiming");target.setPos(nearby);
-            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click interaction must land the hit");
+            c.assertTrue(!chargedStrike(actor,target)&&SoulMode.active(actor),"Right-click strike must require normal interaction reach, not remote aiming");target.setPos(nearby);
+            c.assertTrue(chargedInteract(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click interaction must land the hit");
             c.assertTrue(target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Exactly one normal totem must activate");
             c.assertTrue(!actor.isSpectator()&&!SoulMode.active(actor)&&actor.distanceToSqr(target)<9,"Attacker must materialize in place after the strike");
             c.assertTrue(body.isRemoved(),"Old body must disappear after a committed strike");
-            c.assertTrue(!SoulMode.strike(actor,target)&&target.getHealth()==1,"Repeated action must not cause another hit after projection ends");
+            c.assertTrue(!chargedStrike(actor,target)&&target.getHealth()==1,"Repeated action must not cause another hit after projection ends");
             c.assertTrue(!actor.getCooldowns().isOnCooldown(actor.getMainHandItem()),"Returning must not add an artificial ability timer");c.succeed();
         });
     }
@@ -323,7 +368,7 @@ public final class AccelerationGameTests {
         target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
         c.runAtTickTime(5,()->{
             target.doTick();c.assertTrue(target.getArmorValue()==20,"Fixture must wear real netherite armor");
-            c.assertTrue(SoulMode.begin(actor,actor.position())&&net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click must immediately land the lethal strike and reunite in place");
+            c.assertTrue(SoulMode.begin(actor,actor.position())&&chargedInteract(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click must immediately land the lethal strike and reunite in place");
             c.assertTrue(target.isDeadOrDying(),"A target without a totem must die through Protection IV netherite");c.succeed();
         });
     }
@@ -389,9 +434,9 @@ public final class AccelerationGameTests {
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:creative_targets_and_disabled_pvp_are_protected")
     public void creativeTargetsAndDisabledPvpAreProtected(GameTestHelper c){
         setup(c);var actor=player(c);var target=player(c);target.setPos(actor.position().add(2,0,0));target.setGameMode(GameType.CREATIVE);
-        SoulMode.begin(actor,actor.position());c.assertTrue(!SoulMode.strike(actor,target)&&SoulMode.active(actor),"Creative targets must not be killed");
+        SoulMode.begin(actor,actor.position());c.assertTrue(!chargedStrike(actor,target)&&SoulMode.active(actor),"Creative targets must not be killed");
         target.setGameMode(GameType.SURVIVAL);c.getLevel().getGameRules().set(net.minecraft.world.level.gamerules.GameRules.PVP,false,c.getLevel().getServer());
-        c.assertTrue(!SoulMode.strike(actor,target)&&target.getHealth()==20,"Disabled PvP must prevent soul strike");
+        c.assertTrue(!chargedStrike(actor,target)&&target.getHealth()==20,"Disabled PvP must prevent soul strike");
         c.getLevel().getGameRules().set(net.minecraft.world.level.gamerules.GameRules.PVP,true,c.getLevel().getServer());SoulMode.finish(actor,null);c.succeed();
     }
     @GameTest(maxTicks=100,padding=64,environment="acceleration_gametest:actual_dragon_victory_hook_rewards_only_tracked_dragon")
@@ -446,7 +491,7 @@ public final class AccelerationGameTests {
             owner.invulnerableTime=0;SoulMode.begin(owner,anchor);body=body(c,owner);owner.setPos(anchor.add(1,0,0));
             var attacker=player(c);body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(attacker),4);
             c.assertTrue(owner.getHealth()==12&&SoulMode.active(owner)&&owner.position().distanceToSqr(anchor.add(1,0,0))<1e-8,"Another player's hit must damage you without recalling you");
-            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,body,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-clicking your own body with the spear must also recall you, not lethally strike yourself");
+            c.assertTrue(chargedInteract(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,body,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-clicking your own body with the spear must also recall you, not lethally strike yourself");
             c.assertTrue(!SoulMode.active(owner)&&owner.getHealth()==12&&owner.position().distanceToSqr(anchor)<1e-8,"Self right-click must return to the body without the instant-kill hit");
             owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));owner.setGameMode(GameType.CREATIVE);SoulMode.begin(owner,owner.position());owner.setGameMode(GameType.SURVIVAL);
             SoulMode.finish(owner,owner.position());
@@ -515,7 +560,7 @@ public final class AccelerationGameTests {
             c.assertTrue(zombie.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4)&&zombie.getHealth()<mobHealth,"Ghost must be able to deal ordinary attack damage");
             c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.PASS,"Ordinary ghost attacks must be allowed");
             var held=owner.getMainHandItem();owner.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
-            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.FAIL,"Ordinary right-click entity interactions must be blocked");owner.setItemSlot(EquipmentSlot.MAINHAND,held);
+            c.assertTrue(chargedInteract(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,zombie,null)==net.minecraft.world.InteractionResult.FAIL,"Ordinary right-click entity interactions must be blocked");owner.setItemSlot(EquipmentSlot.MAINHAND,held);
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().sonicBoom(warden),4);
             c.assertTrue(owner.getHealth()==health-4&&SoulMode.active(owner),"A Warden hit on the body must damage the shared real health without recall");
             SoulMode.finish(owner,owner.position());c.succeed();
@@ -585,7 +630,7 @@ public final class AccelerationGameTests {
             dragon.head.setPos(owner.position().add(2,0,0));
             dragon.getPhaseManager().setPhase(net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase.SITTING_SCANNING);
             SoulMode.begin(owner,owner.position());
-            var result=net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,dragon.head,null);
+            var result=chargedInteract(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,dragon.head,null);
             c.assertTrue(result==net.minecraft.world.InteractionResult.SUCCESS&&!SoulMode.active(owner)&&dragon.isDeadOrDying(),"Right-clicking a dragon's actual hitbox must materialize and lethally strike the boss in that interaction");c.succeed();
         });
     }
@@ -651,7 +696,7 @@ public final class AccelerationGameTests {
             c.assertTrue(owner.getHealth()==health&&SoulMode.active(owner),"Opponents must be unable to damage the ghost before its own action");
             c.assertTrue(!owner.isPickable()&&!owner.isPushable(),"Ghost must not be selectable or physically pushable");
             c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming attacks must be rejected");
-            c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming right-clicks must be rejected");
+            c.assertTrue(chargedInteract(observer,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,owner,null)==net.minecraft.world.InteractionResult.FAIL,"Incoming right-clicks must be rejected");
             c.assertTrue(ProjectionPhysics.hiddenFrom(owner,observer)&&!ProjectionPhysics.hiddenFrom(owner,owner)&&!ProjectionPhysics.hiddenFrom(body,observer)&&body.isPickable(),"Ghost must be hidden from others while its body remains visible and vulnerable");
             var cow=c.spawn(EntityTypes.COW,new BlockPos(3,2,2));cow.setPos(ghostPosition.add(0,0,1.5));float before=cow.getHealth();
             owner.setDeltaMovement(new Vec3(.4,0,0));owner.attack(cow);
@@ -718,11 +763,11 @@ public final class AccelerationGameTests {
         c.runAtTickTime(5,()->{
             var stand=new StrikeStand(c.getLevel());stand.setPos(owner.position().add(2,0,0));c.getLevel().addFreshEntity(stand);
             SoulMode.begin(owner,owner.position());
-            c.assertTrue(SoulMode.strike(owner,stand)&&stand.isRemoved()&&stand.received==Float.MAX_VALUE,"Stand strike must receive maximum finite damage and destroy it immediately");
+            c.assertTrue(chargedStrike(owner,stand)&&stand.isRemoved()&&stand.received==Float.MAX_VALUE,"Stand strike must receive maximum finite damage and destroy it immediately");
             var cart=c.spawn(EntityTypes.MINECART,new BlockPos(6,2,6));owner.setPos(cart.position().add(2,0,0));SoulMode.begin(owner,owner.position());
-            c.assertTrue(SoulMode.strike(owner,cart)&&cart.isRemoved()&&!SoulMode.active(owner),"Right-click strike must destroy a damageable non-living minecart and materialize its attacker");
+            c.assertTrue(chargedStrike(owner,cart)&&cart.isRemoved()&&!SoulMode.active(owner),"Right-click strike must destroy a damageable non-living minecart and materialize its attacker");
             var wither=c.spawn(EntityTypes.WITHER,new BlockPos(10,2,10));wither.setInvulnerableTicks(200);owner.setPos(wither.position().add(2,0,0));SoulMode.begin(owner,owner.position());
-            c.assertTrue(SoulMode.strike(owner,wither)&&wither.isDeadOrDying(),"The strike must kill even a Wither during its spawn protection");c.succeed();
+            c.assertTrue(chargedStrike(owner,wither)&&wither.isDeadOrDying(),"The strike must kill even a Wither during its spawn protection");c.succeed();
         });
     }
 
@@ -748,12 +793,12 @@ public final class AccelerationGameTests {
         setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(0,0,12));
         c.runAtTickTime(5,()->{
             var stand=new StrikeStand(c.getLevel());stand.setPos(owner.position().add(3.5,0,0));c.getLevel().addFreshEntity(stand);
-            SoulMode.activateMomentum(owner);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+            SoulMode.activateMomentum(owner);chargeSpear(owner);
             owner.stabAttack(EquipmentSlot.MAINHAND,stand,.01F,true,false,false);
             c.assertTrue(stand.received==Float.MAX_VALUE&&stand.isRemoved()&&!SoulMode.active(owner),"A native right-click joust with tiny base damage must still apply the maximum ghost strike using the spear's actual reach");
             owner.stopUsingItem();target.setPos(owner.position().add(3.5,0,0));target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
             target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
-            SoulMode.activateMomentum(owner);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+            SoulMode.activateMomentum(owner);chargeSpear(owner);
             owner.stabAttack(EquipmentSlot.MAINHAND,target,.01F,true,false,false);
             c.assertTrue(target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner),"A native right-click ghost joust must pop exactly one totem and reunite the body: health="+target.getHealth()+", totem="+target.getOffhandItem()+", projected="+SoulMode.active(owner));owner.stopUsingItem();c.succeed();
         });
@@ -766,7 +811,7 @@ public final class AccelerationGameTests {
         var second=new net.minecraft.world.entity.animal.golem.IronGolem(EntityTypes.IRON_GOLEM,c.getLevel());second.setPos(origin.add(5,0,0));c.getLevel().addFreshEntity(second);
         var side=new StrikeStand(c.getLevel());side.setPos(origin.add(2,0,2));c.getLevel().addFreshEntity(side);
         SoulMode.begin(owner,origin);
-        c.assertTrue(SoulMode.strike(owner,first),"Quick right-click must strike");
+        c.assertTrue(chargedStrike(owner,first),"Quick right-click must strike");
         c.assertTrue(first.isDeadOrDying()&&second.isDeadOrDying(),"A single quick click must pierce both aligned iron golems, including the second at five blocks");
         c.assertTrue(!side.isRemoved()&&!SoulMode.active(owner),"Side targets must be safe and body must reunite once");c.succeed();
     }
@@ -777,7 +822,7 @@ public final class AccelerationGameTests {
         SoulMode.begin(owner,origin);
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,new BlockHitResult(origin,Direction.UP,owner.blockPosition().below(),false));
         c.assertTrue(SoulMode.active(owner),"Right-clicking the spear while looking at a block must not recall before a hit");
-        c.assertTrue(SoulMode.strike(owner,stand)&&stand.projectedAtDamage&&stand.attackerAtDamage.distanceToSqr(origin)<1e-8,"The damage receiver must observe the attacker still projected at the pre-teleport position");
+        c.assertTrue(chargedStrike(owner,stand)&&stand.projectedAtDamage&&stand.attackerAtDamage.distanceToSqr(origin)<1e-8,"The damage receiver must observe the attacker still projected at the pre-teleport position");
         c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-8,"The body must reunite after the hit without moving the attacker");c.succeed();
     }
     @GameTest(maxTicks=80,padding=64,environment="acceleration_gametest:first_dragon_normal_return_dragon_upgraded_without_duplicates")

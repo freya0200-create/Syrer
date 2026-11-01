@@ -35,9 +35,21 @@ public final class AccelerationSpear extends Item {
         var registry=world.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
         registry.listElements().forEach(holder->{if(!holder.is(EnchantmentTags.CURSE)&&holder.value().isSupportedItem(stack))stack.enchant(holder,holder.value().getMaxLevel());});
         var piercing=registry.getOrThrow(Enchantments.PIERCING);stack.enchant(piercing,piercing.value().getMaxLevel());
+        addMaceEnchantments(world,stack);
+    }
+    private static void addMaceEnchantments(ServerLevel world,ItemStack stack){
+        var registry=world.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        for(var key:java.util.List.of(Enchantments.DENSITY,Enchantments.BREACH)){
+            var enchantment=registry.getOrThrow(key);
+            if(EnchantmentHelper.getItemEnchantmentLevel(enchantment,stack)<enchantment.value().getMaxLevel())stack.enchant(enchantment,enchantment.value().getMaxLevel());
+        }
+    }
+    @Override public float getAttackDamageBonus(Entity target,float damage,net.minecraft.world.damagesource.DamageSource source){
+        return source.getDirectEntity() instanceof net.minecraft.world.entity.LivingEntity attacker?SpearDensity.bonus(attacker,target,source):0;
     }
     @Override public void inventoryTick(ItemStack stack,ServerLevel world,Entity owner,EquipmentSlot slot){
         super.inventoryTick(stack,world,owner,slot);
+        addMaceEnchantments(world,stack);
         if(!CLOSE_RANGE.equals(stack.get(DataComponents.ATTACK_RANGE)))stack.set(DataComponents.ATTACK_RANGE,CLOSE_RANGE);
         var attributes=combatAttributes();
         if(!attributes.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS)))stack.set(DataComponents.ATTRIBUTE_MODIFIERS,attributes);

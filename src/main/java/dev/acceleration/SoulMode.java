@@ -165,6 +165,7 @@ public final class SoulMode {
     private static boolean strike(ServerPlayer player,Entity clicked,boolean jousting){
         if(active(player)&&ownBody(player,clicked)&&player.getMainHandItem().is(AccelerationMod.SPEAR)
                 &&player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0))return finish(player,null);
+        if(!SpearCharge.ready(player))return false;
         Entity victim=clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:clicked;
         if(!active(player)||STRIKING.contains(player.getUUID())||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
                 ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0)))return false;

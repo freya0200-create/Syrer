@@ -67,9 +67,14 @@ public final class AccelerationMod implements ModInitializer {
             if(ProjectionPhysics.active(entity))return net.minecraft.world.InteractionResult.FAIL;
             if(!ProjectionPhysics.active(player))return net.minecraft.world.InteractionResult.PASS;
             if(hand!=net.minecraft.world.InteractionHand.MAIN_HAND||!player.getMainHandItem().is(SPEAR))return net.minecraft.world.InteractionResult.FAIL;
-            if(world.isClientSide())return net.minecraft.world.InteractionResult.PASS; // Let vanilla send the entity-use packet.
-            if(player instanceof ServerPlayer actor)
+            if(world.isClientSide()){if(!player.isUsingItem())player.startUsingItem(hand);return net.minecraft.world.InteractionResult.PASS;}
+            if(player instanceof ServerPlayer actor){
+                if(!SoulMode.ownBody(actor,entity)&&!SpearCharge.ready(actor)){
+                    if(!actor.isUsingItem())actor.startUsingItem(hand);
+                    return net.minecraft.world.InteractionResult.SUCCESS;
+                }
                 return SoulMode.strike(actor,entity)?net.minecraft.world.InteractionResult.SUCCESS:net.minecraft.world.InteractionResult.FAIL;
+            }
             return net.minecraft.world.InteractionResult.FAIL;
         });
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output->output.accept(SPEAR));
