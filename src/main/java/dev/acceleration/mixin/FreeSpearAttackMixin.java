@@ -12,12 +12,14 @@ public abstract class FreeSpearAttackMixin {
     private void acceleration$freeSpearAttack(Entity target,Operation<Void> original){
         Player player=(Player)(Object)this;
         if(!player.getMainHandItem().is(ItemTags.SPEARS)){original.call(target);return;}
+        dev.acceleration.AccelerationMod.spearAction(player);
         boolean added=SpearHunger.begin(player);try{original.call(target);}finally{SpearHunger.end(player,added);}
     }
     @WrapMethod(method="stabAttack")
     private boolean acceleration$freeStab(EquipmentSlot slot,Entity target,float damage,boolean hurts,boolean knocks,boolean dismounts,Operation<Boolean> original){
         Player player=(Player)(Object)this;
         if(!player.getItemBySlot(slot).is(ItemTags.SPEARS))return original.call(slot,target,damage,hurts,knocks,dismounts);
+        dev.acceleration.AccelerationMod.spearAction(player);
         boolean added=SpearHunger.begin(player);try{return original.call(slot,target,damage,hurts,knocks,dismounts);}finally{SpearHunger.end(player,added);}
     }
 }

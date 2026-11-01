@@ -23,17 +23,22 @@ public final class AccelerationMod implements ModInitializer {
             .build(net.minecraft.resources.ResourceKey.create(Registries.ENTITY_TYPE,id("player_body"))));
     private static final Identifier SPEED=id("inventory_acceleration");
     private static final Map<UUID,Long> CHARGE=new HashMap<>();
+    private static final Map<UUID,Long> SPEAR_GRACE=new HashMap<>();
+    private static final Set<UUID> USING_SPEAR=new HashSet<>();
     private static final Set<UUID> ENABLED=new HashSet<>();
     public static boolean accelerationEnabled(ServerPlayer player){return ENABLED.contains(player.getUUID());}
     public static boolean toggleAcceleration(ServerPlayer player){
         if(ENABLED.remove(player.getUUID())){
-            CHARGE.remove(player.getUUID());player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(SPEED);
+            CHARGE.remove(player.getUUID());SPEAR_GRACE.remove(player.getUUID());USING_SPEAR.remove(player.getUUID());player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(SPEED);
             player.sendOverlayMessage(Component.literal("Acceleration OFF"));return true;
         }
         if(!player.isAlive()||player.isSpectator()||!carrying(player))return false;
         ENABLED.add(player.getUUID());player.sendOverlayMessage(Component.literal("Acceleration ON • +12% per second while sprinting"));return true;
     }
-    public static void clearAcceleration(ServerPlayer player){ENABLED.remove(player.getUUID());CHARGE.remove(player.getUUID());player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(SPEED);}
+    public static void clearAcceleration(ServerPlayer player){ENABLED.remove(player.getUUID());CHARGE.remove(player.getUUID());SPEAR_GRACE.remove(player.getUUID());USING_SPEAR.remove(player.getUUID());player.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(SPEED);}
+    public static void spearAction(net.minecraft.world.entity.player.Player player){
+        if(player instanceof ServerPlayer actor&&accelerationEnabled(actor))SPEAR_GRACE.put(actor.getUUID(),actor.level().getGameTime()+10);
+    }
     public static boolean carrying(ServerPlayer player){
         for(int slot=0;slot<player.getInventory().getContainerSize();slot++)if(player.getInventory().getItem(slot).is(SPEAR))return true;
         return false;
@@ -41,8 +46,16 @@ public final class AccelerationMod implements ModInitializer {
     public static void accelerationTick(ServerPlayer player){
         boolean valid=carrying(player)&&player.isAlive()&&!player.isSpectator();
         if(!valid)ENABLED.remove(player.getUUID());
+        boolean enabled=valid&&accelerationEnabled(player);
+        boolean usingSpear=player.isUsingItem()&&player.getUseItem().is(net.minecraft.tags.ItemTags.SPEARS);
+        if(!enabled){SPEAR_GRACE.remove(player.getUUID());USING_SPEAR.remove(player.getUUID());}
+        else if(usingSpear)USING_SPEAR.add(player.getUUID());
+        else if(USING_SPEAR.remove(player.getUUID()))spearAction(player);
+        long until=SPEAR_GRACE.getOrDefault(player.getUUID(),-1L);
+        boolean grace=until>=player.level().getGameTime();
+        if(!grace)SPEAR_GRACE.remove(player.getUUID());
         long before=CHARGE.getOrDefault(player.getUUID(),0L);
-        long after=AccelerationRules.charge(before,valid&&accelerationEnabled(player),player.isSprinting());
+        long after=AccelerationRules.charge(before,enabled,player.isSprinting(),usingSpear||grace);
         if(after==0)CHARGE.remove(player.getUUID());else CHARGE.put(player.getUUID(),after);
         var speed=player.getAttribute(Attributes.MOVEMENT_SPEED);
         var existing=speed.getModifier(SPEED);
@@ -64,6 +77,7 @@ public final class AccelerationMod implements ModInitializer {
         net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.register((player,world,hand,target,hit)->
             ProjectionPhysics.active(target)?net.minecraft.world.InteractionResult.FAIL:net.minecraft.world.InteractionResult.PASS);
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.register((player,world,hand,entity,hit)->{
+            if(player.getMainHandItem().is(SPEAR))spearAction(player);
             if(ProjectionPhysics.active(entity))return net.minecraft.world.InteractionResult.FAIL;
             if(!ProjectionPhysics.active(player))return net.minecraft.world.InteractionResult.PASS;
             if(hand!=net.minecraft.world.InteractionHand.MAIN_HAND||!player.getMainHandItem().is(SPEAR))return net.minecraft.world.InteractionResult.FAIL;
@@ -80,8 +94,8 @@ public final class AccelerationMod implements ModInitializer {
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output->output.accept(SPEAR));
         ServerTickEvents.END_SERVER_TICK.register(server->{for(ServerPlayer player:server.getPlayerList().getPlayers()){accelerationTick(player);SoulMode.tick(player);BlockPhasing.tick(player);}});
         ServerPlayConnectionEvents.JOIN.register((handler,sender,server)->SoulMode.finish(handler.player,null));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{SoulMode.finish(handler.player,null);BlockPhasing.forget(handler.player);CHARGE.remove(handler.player.getUUID());ENABLED.remove(handler.player.getUUID());});
-        ServerLifecycleEvents.SERVER_STOPPING.register(server->{for(ServerPlayer player:List.copyOf(server.getPlayerList().getPlayers())){SoulMode.finish(player,null);BlockPhasing.forget(player);}CHARGE.clear();ENABLED.clear();});
+        ServerPlayConnectionEvents.DISCONNECT.register((handler,server)->{SoulMode.finish(handler.player,null);BlockPhasing.forget(handler.player);CHARGE.remove(handler.player.getUUID());ENABLED.remove(handler.player.getUUID());SPEAR_GRACE.remove(handler.player.getUUID());USING_SPEAR.remove(handler.player.getUUID());});
+        ServerLifecycleEvents.SERVER_STOPPING.register(server->{for(ServerPlayer player:List.copyOf(server.getPlayerList().getPlayers())){SoulMode.finish(player,null);BlockPhasing.forget(player);}CHARGE.clear();ENABLED.clear();SPEAR_GRACE.clear();USING_SPEAR.clear();});
         ServerEntityEvents.ENTITY_LOAD.register((entity,world)->{
             if(entity.entityTags().contains(SoulMode.BODY_TAG)){
                 var session=SoulState.get(world.getServer()).body(entity.getUUID());

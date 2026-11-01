@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.6.2+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.6.3+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -107,3 +107,5 @@ OP commands (both /accleration and /acceleration): speed add <percent>, speed se
 1.6.1: Ghost Spear special strikes apply Fire Aspect (four seconds per level) or Flame (five seconds) when the spear carries the enchantment. With both, the longer duration wins. Ignition happens after successful damage, including on a one-totem survivor, before in-place body reunion. Fire immunity, Fire Protection, Fire Resistance, water and rain retain native handling. No additional hit or forced dash is added.
 
 1.6.2: Ghost instant strikes require holding right click through the native spear charge delay (10 ticks / 0.5 seconds). Tapping a target starts charging without damage or reunion. Density V and Breach IV are added to new and existing Ghost Spears. Density contributes fall-based bonus damage to normal spear jabs; native Breach reduces armor effectiveness. The charged ghost strike keeps maximum damage and one-totem survival.
+
+1.6.3: Accumulated acceleration is preserved while using a spear and for ten ticks (0.5 seconds) after a spear action or release, even when vanilla cancels sprinting. Sprinting still grows charge at the same 12%/second; standing with a spear does not build free charge. Normal slowdown resumes outside the short spear grace period. I-off, speed reset, death, spectator mode and removing the Ghost Spear still clear acceleration.

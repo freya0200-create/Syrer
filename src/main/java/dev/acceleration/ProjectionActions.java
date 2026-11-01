@@ -10,11 +10,13 @@ public final class ProjectionActions {
             if(player instanceof ServerPlayer actor&&SoulMode.active(actor))SoulMode.finish(actor,actor.position());
         });
         UseBlockCallback.EVENT.register((player,world,hand,hit)->{
+            if(player.getItemInHand(hand).is(net.minecraft.tags.ItemTags.SPEARS))AccelerationMod.spearAction(player);
             if(player instanceof ServerPlayer actor&&SoulMode.active(actor)&&!player.getItemInHand(hand).is(AccelerationMod.SPEAR)&&!player.getItemInHand(hand).has(DataComponents.FOOD)&&!player.getItemInHand(hand).is(Items.ENDER_PEARL)&&!player.getItemInHand(hand).is(Items.WIND_CHARGE))SoulMode.finish(actor,actor.position());
             return InteractionResult.PASS;
         });
         UseItemCallback.EVENT.register((player,world,hand)->{
             var stack=player.getItemInHand(hand);
+            if(stack.is(net.minecraft.tags.ItemTags.SPEARS))AccelerationMod.spearAction(player);
             if(player instanceof ServerPlayer actor&&SoulMode.active(actor)&&!stack.isEmpty()&&!stack.is(AccelerationMod.SPEAR)&&!stack.has(DataComponents.FOOD)&&!stack.is(Items.ENDER_PEARL)&&!stack.is(Items.WIND_CHARGE))SoulMode.finish(actor,actor.position());
             return InteractionResult.PASS;
         });

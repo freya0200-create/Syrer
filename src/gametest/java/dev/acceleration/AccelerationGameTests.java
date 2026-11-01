@@ -59,6 +59,31 @@ public final class AccelerationGameTests {
         if(SoulMode.active(player)&&player.getMainHandItem().is(AccelerationMod.SPEAR)&&!SoulMode.ownBody(player,target))chargeSpear(player);
         return net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(player,world,hand,target,hit);
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:spear_use_and_hits_preserve_acceleration_through_reunion")
+    public void spearUseAndHitsPreserveAccelerationThroughReunion(GameTestHelper c){
+        setup(c);var owner=player(c);AccelerationMod.toggleAcceleration(owner);owner.setSprinting(true);
+        for(int i=0;i<100;i++)AccelerationMod.accelerationTick(owner);
+        long charged=AccelerationMod.charge(owner);c.assertTrue(charged==100,"Sprinting must build the usual acceleration");
+        owner.setSprinting(false);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        for(int i=0;i<50;i++)AccelerationMod.accelerationTick(owner);
+        c.assertTrue(AccelerationMod.charge(owner)==charged&&AccelerationMod.accelerationEnabled(owner),"Charging a spear with sprint cancelled must preserve accumulated acceleration without increasing it");
+        owner.stopUsingItem();AccelerationMod.accelerationTick(owner);
+        c.assertTrue(AccelerationMod.charge(owner)==charged,"Release must not immediately drain acceleration");
+        var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(2,0,0));c.getLevel().addFreshEntity(golem);
+        SoulMode.begin(owner,owner.position());chargeSpear(owner);
+        c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,golem,0,false,true,false)&&golem.isDeadOrDying()&&!SoulMode.active(owner),"Full-charge ghost strike must still kill and reunite normally");
+        AccelerationMod.accelerationTick(owner);c.assertTrue(AccelerationMod.charge(owner)==charged,"Hit and body reunion must preserve the acceleration charge");
+        owner.stopUsingItem();AccelerationMod.accelerationTick(owner);
+        owner.setSprinting(true);AccelerationMod.accelerationTick(owner);
+        c.assertTrue(AccelerationMod.charge(owner)==charged+1,"Resuming sprint must continue from the previous charge rather than zero");owner.setSprinting(false);
+        c.runAtTickTime(15,()->{
+            c.assertTrue(AccelerationMod.charge(owner)<charged+1,"Normal decay must resume after the short spear grace ends");
+            owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);SpeedCommands.set(owner,0);AccelerationMod.accelerationTick(owner);
+            c.assertTrue(AccelerationMod.charge(owner)==0&&!AccelerationMod.accelerationEnabled(owner),"Speed reset must still clear acceleration even while using a spear");
+            owner.stopUsingItem();c.succeed();
+        });
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_spear_requires_full_charge_and_taps_do_no_damage")
     public void ghostSpearRequiresFullChargeAndTapsDoNoDamage(GameTestHelper c){
         setup(c);var owner=player(c);var target=player(c);target.setPos(owner.position().add(2,0,0));
