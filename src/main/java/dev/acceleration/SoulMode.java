@@ -200,6 +200,7 @@ public final class SoulMode {
                 if(target instanceof net.minecraft.world.entity.boss.wither.WitherBoss wither)wither.setInvulnerableTicks(0);
                 boolean damaged=target instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
                     dragon.hurt(world,dragon.head,source,STRIKE_DAMAGE):target.hurtServer(world,source,STRIKE_DAMAGE);
+                if(damaged)SpearFire.apply(player,target);
                 hit|=damaged;
             }
             if(hit){

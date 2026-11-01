@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.6.0+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.6.1+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -103,3 +103,5 @@ OP commands (both /accleration and /acceleration): speed add <percent>, speed se
 1.5.9 is a performance-only update based on 1.5.6. Gameplay, attack timings, input behavior, acceleration, ghost mechanics, phasing controls and speed commands are unchanged. It avoids repeated per-mob entity-section searches, indexes linked body ownership, reuses fixed item metadata, copies body equipment only when it changes, skips unchanged speed modifiers, and caches body skin-profile checks between updates. No guaranteed FPS or internet ping improvement is claimed.
 
 1.6.0: Ghost Spear special hits reunite the body at the current player position, with no forced teleport beside the victim and no in-place position-correction packet. Position, view direction and existing velocity stay unchanged by the strike. Instant damage, one-totem survival, piercing, native lunge controls, acceleration, phasing and performance improvements remain.
+
+1.6.1: Ghost Spear special strikes apply Fire Aspect (four seconds per level) or Flame (five seconds) when the spear carries the enchantment. With both, the longer duration wins. Ignition happens after successful damage, including on a one-totem survivor, before in-place body reunion. Fire immunity, Fire Protection, Fire Resistance, water and rain retain native handling. No additional hit or forced dash is added.

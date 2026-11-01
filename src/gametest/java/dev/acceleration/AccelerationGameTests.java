@@ -45,6 +45,23 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ghost_spear_fire_aspect_and_flame_survive_reunion")
+    public void ghostSpearFireAspectAndFlameSurviveReunion(GameTestHelper c){
+        setup(c);var owner=player(c);var target=player(c);var registry=c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setPos(owner.position().add(0,0,2));
+        var aspect=new ItemStack(AccelerationMod.SPEAR);aspect.enchant(registry.getOrThrow(Enchantments.FIRE_ASPECT),2);
+        owner.setItemSlot(EquipmentSlot.MAINHAND,aspect);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        SoulMode.begin(owner,owner.position());Vec3 origin=owner.position();
+        c.assertTrue(SoulMode.strike(owner,target)&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Fire Aspect hit must still pop exactly one totem");
+        c.assertTrue(target.getRemainingFireTicks()>=160&&!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-8,"Fire Aspect II must ignite for eight seconds after the totem and smooth reunion");
+        target.clearFire();target.removeAllEffects();target.setHealth(20);target.invulnerableTime=0;target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        var flame=new ItemStack(AccelerationMod.SPEAR);flame.enchant(registry.getOrThrow(Enchantments.FLAME),1);owner.setItemSlot(EquipmentSlot.MAINHAND,flame);
+        SoulMode.begin(owner,owner.position());owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Flame native right-click contact must still activate one totem");
+        c.assertTrue(target.getRemainingFireTicks()>=100&&!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-8,"Flame must ignite for five seconds after reunion without a dash");owner.stopUsingItem();
+        c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:spear_special_hit_has_no_dash_camera_snap_or_momentum_change")
     public void spearSpecialHitHasNoDashCameraSnapOrMomentumChange(GameTestHelper c){
         setup(c);var owner=player(c);Vec3 origin=owner.position(),velocity=new Vec3(.2,.1,.4);
