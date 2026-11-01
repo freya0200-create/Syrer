@@ -92,12 +92,12 @@ public final class AccelerationGameTests {
         net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null);
         c.assertTrue(owner.isUsingItem()&&!SpearCharge.ready(owner)&&target.getHealth()==20&&SoulMode.active(owner),"A quick right click on an entity must start charging without damage or reunion");
         c.assertTrue(!owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.getHealth()==20&&!linked.isRemoved(),"Uncharged contact must not deal instant damage or knock the target");
-        for(int i=0;i<9;i++)owner.doTick();
-        c.assertTrue(!SpearCharge.ready(owner)&&!SoulMode.strike(owner,target)&&target.getHealth()==20,"Nine charge ticks must not unlock the instant strike");
+        for(int i=0;i<2;i++)owner.doTick();
+        c.assertTrue(!SpearCharge.ready(owner)&&!SoulMode.strike(owner,target)&&target.getHealth()==20,"Two charge ticks must not unlock the instant strike");
         owner.stopUsingItem();owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         c.assertTrue(!SpearCharge.ready(owner),"Releasing and re-pressing must restart the charge");
-        for(int i=0;i<10;i++)owner.doTick();
-        c.assertTrue(SpearCharge.ready(owner),"Ten actual native player ticks must fully charge the spear");
+        for(int i=0;i<3;i++)owner.doTick();
+        c.assertTrue(SpearCharge.ready(owner),"Three actual native player ticks must fully charge the spear");
         Vec3 position=owner.position();
         c.assertTrue(SoulMode.strike(owner,target)&&target.getHealth()==1&&target.getOffhandItem().isEmpty()&&!SoulMode.active(owner)&&linked.isRemoved(),"A fully charged hit must pop one totem and return the body");
         c.assertTrue(owner.position().distanceToSqr(position)<1e-8,"Full-charge strike must retain smooth in-place reunion");c.succeed();
@@ -106,7 +106,13 @@ public final class AccelerationGameTests {
     public void ghostSpearHasDensityAndBreachWithRealEffects(GameTestHelper c){
         setup(c);var owner=player(c);var stack=owner.getMainHandItem();var registry=c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
         c.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.DENSITY),stack)==5&&EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.BREACH),stack)==4,"New Ghost Spear must have Density V and Breach IV together");
-        var old=new ItemStack(AccelerationMod.SPEAR);AccelerationMod.SPEAR.inventoryTick(old,c.getLevel(),owner,EquipmentSlot.MAINHAND);
+        var old=new ItemStack(AccelerationMod.SPEAR);
+        old.set(DataComponents.KINETIC_WEAPON,Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.KINETIC_WEAPON));
+        old.set(DataComponents.SWING_ANIMATION,Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.SWING_ANIMATION));
+        old.set(DataComponents.ATTRIBUTE_MODIFIERS,Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.ATTRIBUTE_MODIFIERS));
+        AccelerationMod.SPEAR.inventoryTick(old,c.getLevel(),owner,EquipmentSlot.MAINHAND);
+        c.assertTrue(old.get(DataComponents.KINETIC_WEAPON).delayTicks()==3&&old.get(DataComponents.KINETIC_WEAPON).contactCooldownTicks()==2&&old.get(DataComponents.SWING_ANIMATION).duration()==2,"Existing spear must migrate its charge, hit repeat and animation timings together");
+        c.assertTrue(old.get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().anyMatch(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED)&&e.modifier().amount()==6),"Existing spear attack indicator must also migrate to ten attacks per second");
         c.assertTrue(EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.DENSITY),old)==5&&EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(Enchantments.BREACH),old)==4,"Existing spear must receive both enchantments");
         var golem=EntityTypes.IRON_GOLEM.create(c.getLevel(),EntitySpawnReason.COMMAND);golem.setPos(owner.position().add(2,0,0));c.getLevel().addFreshEntity(golem);
         owner.fallDistance=6;owner.setOnGround(false);var source=c.getLevel().damageSources().playerAttack(owner);
@@ -328,7 +334,7 @@ public final class AccelerationGameTests {
         c.assertTrue(stack.getMaxDamage()==Items.DIAMOND_SPEAR.getDefaultInstance().getMaxDamage(),"Spear must use diamond durability, not netherite");
         var modifiers=stack.get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers();
         var speed=modifiers.stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED)).findFirst().orElseThrow();
-        c.assertTrue(Math.abs(4+speed.modifier().amount()-4)<1e-6,"Held spear must have 4 attacks per second: quarter-second cooldown");
+        c.assertTrue(Math.abs(4+speed.modifier().amount()-10)<1e-6,"Held spear must have 10 attacks per second: tenth-second cooldown");
         var damage=modifiers.stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)).findFirst().orElseThrow();
         var vanillaDamage=Items.DIAMOND_SPEAR.getDefaultInstance().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(e->e.attribute().equals(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE)).findFirst().orElseThrow();
         c.assertTrue(damage.equals(vanillaDamage),"Faster spear must retain diamond attack damage");

@@ -57,14 +57,8 @@ public final class AccelerationMod implements ModInitializer {
         long before=CHARGE.getOrDefault(player.getUUID(),0L);
         long after=AccelerationRules.charge(before,enabled,player.isSprinting(),usingSpear||grace);
         if(after==0)CHARGE.remove(player.getUUID());else CHARGE.put(player.getUUID(),after);
-        var speed=player.getAttribute(Attributes.MOVEMENT_SPEED);
-        var existing=speed.getModifier(SPEED);
-        double amount=AccelerationRules.speedBonus(after);
-        if(after==0){if(existing!=null)speed.removeModifier(SPEED);}
-        else if(existing==null||Double.compare(existing.amount(),amount)!=0){
-            if(existing!=null)speed.removeModifier(SPEED);
-            speed.addTransientModifier(new AttributeModifier(SPEED,amount,AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
-        }
+        var speed=player.getAttribute(Attributes.MOVEMENT_SPEED);speed.removeModifier(SPEED);
+        if(after>0)speed.addTransientModifier(new AttributeModifier(SPEED,AccelerationRules.speedBonus(after),AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
     }
     public static long charge(ServerPlayer player){return CHARGE.getOrDefault(player.getUUID(),0L);}
     @Override public void onInitialize(){

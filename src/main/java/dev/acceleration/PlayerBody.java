@@ -28,12 +28,9 @@ public class PlayerBody extends Avatar {
             var session=SoulState.get(world.getServer()).body(getUUID());
             var owner=session==null?null:world.getServer().getPlayerList().getPlayer(session.owner());
             if(owner==null){discard();return;}
-            if(position().distanceToSqr(session.anchor())>0)setPos(session.anchor());
-            if(getHealth()!=owner.getHealth())setHealth(owner.getHealth());
-            for(EquipmentSlot slot:EquipmentSlot.values())if(slot!=EquipmentSlot.BODY&&slot!=EquipmentSlot.SADDLE){
-                var equipped=owner.getItemBySlot(slot);
-                if(!net.minecraft.world.item.ItemStack.matches(getItemBySlot(slot),equipped))setItemSlot(slot,equipped.copy());
-            }
+            setPos(session.anchor());setHealth(owner.getHealth());
+            for(EquipmentSlot slot:EquipmentSlot.values())if(slot!=EquipmentSlot.BODY&&slot!=EquipmentSlot.SADDLE)
+                setItemSlot(slot,owner.getItemBySlot(slot).copy());
         }
     }
     @Override protected void addAdditionalSaveData(ValueOutput out){super.addAdditionalSaveData(out);out.store("profile",ResolvableProfile.CODEC,getProfile());}

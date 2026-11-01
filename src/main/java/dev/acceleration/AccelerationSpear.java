@@ -12,21 +12,26 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.*;
 public final class AccelerationSpear extends Item {
     public static final net.minecraft.world.item.component.AttackRange CLOSE_RANGE=new net.minecraft.world.item.component.AttackRange(0,4.5F,0,6.5F,.125F,.5F);
-    private static final Component RED_NAME=Component.translatable("item.acceleration.acceleration_spear").withStyle(ChatFormatting.RED);
-    private static final net.minecraft.world.item.component.ItemAttributeModifiers COMBAT_ATTRIBUTES=createCombatAttributes();
     public AccelerationSpear(Properties properties){super(properties);}
-    private static Component redName(){return RED_NAME;}
-    private static net.minecraft.world.item.component.ItemAttributeModifiers combatAttributes(){return COMBAT_ATTRIBUTES;}
-    private static net.minecraft.world.item.component.ItemAttributeModifiers createCombatAttributes(){
+    private static Component redName(){return Component.translatable("item.acceleration.acceleration_spear").withStyle(ChatFormatting.RED);}
+    private static net.minecraft.world.item.component.ItemAttributeModifiers combatAttributes(){
         return net.minecraft.world.item.component.ItemAttributeModifiers.builder()
             .add(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE,new net.minecraft.world.entity.ai.attributes.AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID,ToolMaterial.DIAMOND.attackDamageBonus(),net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),net.minecraft.world.entity.EquipmentSlotGroup.MAINHAND)
-            .add(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED,new net.minecraft.world.entity.ai.attributes.AttributeModifier(Item.BASE_ATTACK_SPEED_ID,0,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),net.minecraft.world.entity.EquipmentSlotGroup.MAINHAND)
+            .add(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED,new net.minecraft.world.entity.ai.attributes.AttributeModifier(Item.BASE_ATTACK_SPEED_ID,6,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),net.minecraft.world.entity.EquipmentSlotGroup.MAINHAND)
             .add(net.minecraft.world.entity.ai.attributes.Attributes.ENTITY_INTERACTION_RANGE,new net.minecraft.world.entity.ai.attributes.AttributeModifier(AccelerationMod.id("spear_interaction_reach"),1.5,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),net.minecraft.world.entity.EquipmentSlotGroup.MAINHAND).build();
     }
+    public static net.minecraft.world.item.component.KineticWeapon fastKineticWeapon(){
+        return new net.minecraft.world.item.component.KineticWeapon(2,3,
+            net.minecraft.world.item.component.KineticWeapon.Condition.ofAttackerSpeed(60,10F),
+            net.minecraft.world.item.component.KineticWeapon.Condition.ofAttackerSpeed(130,5.1F),
+            net.minecraft.world.item.component.KineticWeapon.Condition.ofRelativeSpeed(200,4.6F),
+            .38F,1.075F,java.util.Optional.of(net.minecraft.sounds.SoundEvents.SPEAR_USE),java.util.Optional.of(net.minecraft.sounds.SoundEvents.SPEAR_HIT));
+    }
     public static Properties properties(){
-        return new Properties().spear(ToolMaterial.DIAMOND,.25F,1.075F,.5F,3F,10F,6.5F,5.1F,10F,4.6F)
+        return new Properties().spear(ToolMaterial.DIAMOND,.1F,1.075F,.15F,3F,10F,6.5F,5.1F,10F,4.6F)
             .setId(ResourceKey.create(Registries.ITEM,AccelerationMod.id("acceleration_spear")))
             .component(DataComponents.ITEM_NAME,redName())
+            .component(DataComponents.KINETIC_WEAPON,fastKineticWeapon())
             .component(DataComponents.ATTACK_RANGE,CLOSE_RANGE)
             .component(DataComponents.ATTRIBUTE_MODIFIERS,combatAttributes());
     }
@@ -50,6 +55,10 @@ public final class AccelerationSpear extends Item {
     @Override public void inventoryTick(ItemStack stack,ServerLevel world,Entity owner,EquipmentSlot slot){
         super.inventoryTick(stack,world,owner,slot);
         addMaceEnchantments(world,stack);
+        var kinetic=fastKineticWeapon();
+        if(!kinetic.equals(stack.get(DataComponents.KINETIC_WEAPON)))stack.set(DataComponents.KINETIC_WEAPON,kinetic);
+        var swing=new net.minecraft.world.item.component.SwingAnimation(net.minecraft.world.item.SwingAnimationType.STAB,2);
+        if(!swing.equals(stack.get(DataComponents.SWING_ANIMATION)))stack.set(DataComponents.SWING_ANIMATION,swing);
         if(!CLOSE_RANGE.equals(stack.get(DataComponents.ATTACK_RANGE)))stack.set(DataComponents.ATTACK_RANGE,CLOSE_RANGE);
         var attributes=combatAttributes();
         if(!attributes.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS)))stack.set(DataComponents.ATTRIBUTE_MODIFIERS,attributes);
