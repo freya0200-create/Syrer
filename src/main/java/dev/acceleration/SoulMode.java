@@ -94,7 +94,7 @@ public final class SoulMode {
         world.playSound(null,anchor.x,anchor.y,anchor.z,SoundEvents.SOUL_ESCAPE,SoundSource.PLAYERS,1,1);
         return true;
     }
-    /** Null destination returns to the original body; a strike commits the player at the target. */
+    /** Null destination returns to the anchor; a non-null position reunites the body there. */
     public static boolean finish(ServerPlayer player,Vec3 destination){
         var state=SoulState.get(player.level().getServer());var session=state.projection(player.getUUID());if(session==null)return false;
         state.remove(player.getUUID());LUNGE_RETURNS.remove(player.getUUID());
@@ -109,7 +109,9 @@ public final class SoulMode {
         if(player.gameMode()==session.mode())player.getAbilities().apply(session.abilities());
         player.gameMode().updatePlayerAbilities(player.getAbilities());player.onUpdateAbilities();
         Vec3 momentum=player.getDeltaMovement();
-        player.teleportTo(target,returnTo.x,returnTo.y,returnTo.z,Set.of(),player.getYRot(),player.getXRot(),true);
+        // In-place reunion needs no position-correction packet: avoid camera snapping on hits.
+        if(destination==null||target!=player.level()||returnTo.distanceToSqr(player.position())>1e-10)
+            player.teleportTo(target,returnTo.x,returnTo.y,returnTo.z,Set.of(),player.getYRot(),player.getXRot(),true);
         player.setDeltaMovement(destination==null?Vec3.ZERO:momentum);player.fallDistance=0;
         sync(player,false);return true;
     }
@@ -166,8 +168,7 @@ public final class SoulMode {
         Entity victim=clicked instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part?part.parentMob:clicked;
         if(!active(player)||STRIKING.contains(player.getUUID())||!player.getMainHandItem().is(AccelerationMod.SPEAR)||!eligible(player,victim)
                 ||!(jousting?player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0):player.isWithinAttackRange(player.getMainHandItem(),clicked.getBoundingBox(),0)))return false;
-        ServerLevel world=player.level();Vec3 destination=landing(world,player,clicked);
-        if(destination==null)destination=player.position(); // Cramped landing must not cancel a valid hit.
+        ServerLevel world=player.level();Vec3 destination=player.position();
         // Collect the narrow forward thrust before any damage, teleport or entity removal.
         Vec3 start=player.getEyePosition();
         var targetBox=clicked.getBoundingBox();
@@ -209,13 +210,4 @@ public final class SoulMode {
         }finally{STRIKING.remove(player.getUUID());}
     }
 
-    private static Vec3 landing(ServerLevel world,ServerPlayer player,Entity target){
-        for(Vec3 offset:new Vec3[]{new Vec3(1.6,0,0),new Vec3(-1.6,0,0),new Vec3(0,0,1.6),new Vec3(0,0,-1.6),new Vec3(0,1,0)}){
-            Vec3 position=target.position().add(offset);
-            var box=player.getBoundingBox().move(position.subtract(player.position()));
-            if(world.getWorldBorder().isWithinBounds(net.minecraft.core.BlockPos.containing(position))&&world.noCollision(player,box)
-                    &&!world.containsAnyLiquid(box))return position;
-        }
-        return null;
-    }
 }

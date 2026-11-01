@@ -45,6 +45,25 @@ public final class AccelerationGameTests {
         var session=SoulState.get(c.getLevel().getServer()).projection(player.getUUID());
         return (PlayerBody)c.getLevel().getEntity(session.body());
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:spear_special_hit_has_no_dash_camera_snap_or_momentum_change")
+    public void spearSpecialHitHasNoDashCameraSnapOrMomentumChange(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 origin=owner.position(),velocity=new Vec3(.2,.1,.4);
+        var stand=new StrikeStand(c.getLevel());stand.setPos(origin.add(0,0,2));c.getLevel().addFreshEntity(stand);
+        SoulMode.begin(owner,origin);var linked=body(c,owner);owner.setDeltaMovement(velocity);owner.setYRot(35);owner.setXRot(-10);
+        try{
+            var counter=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("awaitingTeleport");counter.setAccessible(true);int before=counter.getInt(owner.connection);
+            c.assertTrue(SoulMode.strike(owner,stand)&&stand.received==Float.MAX_VALUE&&stand.isRemoved(),"Smooth strike must still deal maximum damage");
+            c.assertTrue(!SoulMode.active(owner)&&linked.isRemoved()&&owner.position().distanceToSqr(origin)<1e-10,"Special strike must reunite without dashing or repositioning");
+            c.assertTrue(counter.getInt(owner.connection)==before,"In-place reunion must not send a teleport correction to the client");
+            c.assertTrue(owner.getDeltaMovement().distanceToSqr(velocity)<1e-10&&owner.getYRot()==35&&owner.getXRot()==-10,"Strike must preserve camera angles and existing movement");
+            var target=player(c);target.setPos(origin.add(0,0,3.5));target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+            SoulMode.begin(owner,origin);owner.setDeltaMovement(velocity);owner.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);before=counter.getInt(owner.connection);
+            c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Native right-click contact must still pop one totem");
+            c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-10&&counter.getInt(owner.connection)==before&&owner.getDeltaMovement().distanceToSqr(velocity)<1e-10,"Native right-click must also reunite smoothly without a teleport or velocity kick");owner.stopUsingItem();
+        }catch(ReflectiveOperationException error){throw new RuntimeException(error);}
+        c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:body_equipment_updates_preserve_counts_damage_and_owner_inventory")
     public void bodyEquipmentUpdatesPreserveCountsDamageAndOwnerInventory(GameTestHelper c){
         setup(c);var owner=player(c);SoulMode.begin(owner,owner.position());var linked=body(c,owner);
@@ -271,7 +290,7 @@ public final class AccelerationGameTests {
             c.assertTrue(!SoulMode.strike(actor,target)&&SoulMode.active(actor),"Right-click strike must require normal interaction reach, not remote aiming");target.setPos(nearby);
             c.assertTrue(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click interaction must land the hit");
             c.assertTrue(target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Exactly one normal totem must activate");
-            c.assertTrue(!actor.isSpectator()&&!SoulMode.active(actor)&&actor.distanceToSqr(target)<9,"Attacker must materialize beside the target");
+            c.assertTrue(!actor.isSpectator()&&!SoulMode.active(actor)&&actor.distanceToSqr(target)<9,"Attacker must materialize in place after the strike");
             c.assertTrue(body.isRemoved(),"Old body must disappear after a committed strike");
             c.assertTrue(!SoulMode.strike(actor,target)&&target.getHealth()==1,"Repeated action must not cause another hit after projection ends");
             c.assertTrue(!actor.getCooldowns().isOnCooldown(actor.getMainHandItem()),"Returning must not add an artificial ability timer");c.succeed();
@@ -287,7 +306,7 @@ public final class AccelerationGameTests {
         target.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);
         c.runAtTickTime(5,()->{
             target.doTick();c.assertTrue(target.getArmorValue()==20,"Fixture must wear real netherite armor");
-            c.assertTrue(SoulMode.begin(actor,actor.position())&&net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click must immediately teleport and land the lethal strike");
+            c.assertTrue(SoulMode.begin(actor,actor.position())&&net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(actor,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,target,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-click must immediately land the lethal strike and reunite in place");
             c.assertTrue(target.isDeadOrDying(),"A target without a totem must die through Protection IV netherite");c.succeed();
         });
     }
@@ -742,7 +761,7 @@ public final class AccelerationGameTests {
         net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,new BlockHitResult(origin,Direction.UP,owner.blockPosition().below(),false));
         c.assertTrue(SoulMode.active(owner),"Right-clicking the spear while looking at a block must not recall before a hit");
         c.assertTrue(SoulMode.strike(owner,stand)&&stand.projectedAtDamage&&stand.attackerAtDamage.distanceToSqr(origin)<1e-8,"The damage receiver must observe the attacker still projected at the pre-teleport position");
-        c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)>.1,"Teleport and reunion must only happen after the successful hit");c.succeed();
+        c.assertTrue(!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-8,"The body must reunite after the hit without moving the attacker");c.succeed();
     }
     @GameTest(maxTicks=80,padding=64,environment="acceleration_gametest:first_dragon_normal_return_dragon_upgraded_without_duplicates")
     public void firstDragonNormalReturnDragonUpgradedWithoutDuplicates(GameTestHelper c){
