@@ -155,7 +155,7 @@ public final class AccelerationGameTests {
         SoulMode.begin(owner,owner.position());Vec3 origin=owner.position();
         c.assertTrue(chargedStrike(owner,target)&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Fire Aspect hit must still pop exactly one totem");
         c.assertTrue(target.getRemainingFireTicks()>=160&&!SoulMode.active(owner)&&owner.position().distanceToSqr(origin)<1e-8,"Fire Aspect II must ignite for eight seconds after the totem and smooth reunion");
-        target.clearFire();target.removeAllEffects();target.setHealth(20);((dev.acceleration.mixin.EntityInvulnerabilityAccess)target).acceleration$setInvulnerableTime(0);target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        target.clearFire();target.removeAllEffects();target.setHealth(20);target.damageCooldownTime=0;target.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
         var flame=new ItemStack(AccelerationMod.SPEAR);flame.enchant(registry.getOrThrow(Enchantments.FLAME),1);owner.setItemSlot(EquipmentSlot.MAINHAND,flame);
         SoulMode.begin(owner,owner.position());chargeSpear(owner);
         c.assertTrue(owner.stabAttack(EquipmentSlot.MAINHAND,target,0,false,true,false)&&target.isAlive()&&target.getHealth()==1&&target.getOffhandItem().isEmpty(),"Flame native right-click contact must still activate one totem");
@@ -320,10 +320,12 @@ public final class AccelerationGameTests {
         owner.setPos(start);owner.connection.resetPosition();
         owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(1,0,0),true,false));
         c.assertTrue(Math.abs(owner.getX()-start.x-1)<1e-6,"The server must accept a real movement packet entering the wall, without rubber-banding");
-        owner.connection.tick(); // 26.3 accepts one position update per connection tick.
-        owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(2,0,0),true,false));
-        c.assertTrue(Math.abs(owner.getX()-start.x-2)<1e-6,"The next movement packet must emerge on the other side");
-        c.assertTrue(BlockPhasing.stop(owner),"Phasing must disable after moving through the wall");c.succeed();
+        c.runAtTickTime(2,()->{
+            owner.connection.tick();
+            owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(2,0,0),true,false));
+            c.assertTrue(Math.abs(owner.getX()-start.x-2)<1e-6,"The next game tick's movement packet must emerge on the other side; moved="+(owner.getX()-start.x));
+            c.assertTrue(BlockPhasing.stop(owner),"Phasing must disable after moving through the wall");c.succeed();
+        });
     }
 
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:block_phasing_toggle_collision_and_safe_exit")
@@ -527,7 +529,7 @@ public final class AccelerationGameTests {
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),1000);
             c.assertTrue(owner.isAlive()&&owner.getHealth()==1&&owner.getOffhandItem().isEmpty(),"A body hit must consume the real player's totem exactly once");
             c.assertTrue(SoulMode.active(owner)&&!body.isRemoved()&&body.getHealth()==1,"A saved player must remain projected with shared body health");
-            ((dev.acceleration.mixin.EntityInvulnerabilityAccess)owner).acceleration$setInvulnerableTime(0);
+            owner.damageCooldownTime=0;
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().generic(),1000);
             c.assertTrue(owner.isDeadOrDying()&&!SoulMode.active(owner)&&body.isRemoved(),"A lethal body hit must kill the real owner and clean up without dropping body equipment; health="+owner.getHealth()+", active="+SoulMode.active(owner)+", invulnerability="+owner.getInvulnerableTime());
             c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().instabuild,"Death must not switch to Creative");c.succeed();
@@ -543,11 +545,11 @@ public final class AccelerationGameTests {
             c.assertTrue(net.fabricmc.fabric.api.event.player.AttackEntityCallback.EVENT.invoker().interact(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,body,null)==net.minecraft.world.InteractionResult.PASS,"Normal left-click must be permitted on your own body");
             owner.attack(body);
             c.assertTrue(owner.getHealth()<20&&!SoulMode.active(owner)&&body.isRemoved()&&owner.position().distanceToSqr(anchor)<1e-8,"Your own vanilla punch must damage shared health and return you to your body");
-            owner.setHealth(20);((dev.acceleration.mixin.EntityInvulnerabilityAccess)owner).acceleration$setInvulnerableTime(0);owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));
+            owner.setHealth(20);owner.damageCooldownTime=0;owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));
             SoulMode.begin(owner,anchor);body=body(c,owner);owner.setPos(anchor.add(1,0,0));
             body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(owner),4);
             c.assertTrue(owner.getHealth()==16&&!SoulMode.active(owner)&&owner.gameMode()==GameType.SURVIVAL&&owner.position().distanceToSqr(anchor)<1e-8,"Only your own direct hit must recall you, applying damage exactly once; health="+owner.getHealth()+", active="+SoulMode.active(owner)+", invulnerability="+owner.getInvulnerableTime());
-            ((dev.acceleration.mixin.EntityInvulnerabilityAccess)owner).acceleration$setInvulnerableTime(0);SoulMode.begin(owner,anchor);body=body(c,owner);owner.setPos(anchor.add(1,0,0));
+            owner.damageCooldownTime=0;SoulMode.begin(owner,anchor);body=body(c,owner);owner.setPos(anchor.add(1,0,0));
             var attacker=player(c);body.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(attacker),4);
             c.assertTrue(owner.getHealth()==12&&SoulMode.active(owner)&&owner.position().distanceToSqr(anchor.add(1,0,0))<1e-8,"Another player's hit must damage you without recalling you");
             c.assertTrue(chargedInteract(owner,c.getLevel(),net.minecraft.world.InteractionHand.MAIN_HAND,body,null)==net.minecraft.world.InteractionResult.SUCCESS,"Right-clicking your own body with the spear must also recall you, not lethally strike yourself");
@@ -924,7 +926,7 @@ public final class AccelerationGameTests {
             for(int i=0;i<3;i++){stack.get(DataComponents.PIERCING_WEAPON).attack(owner,EquipmentSlot.MAINHAND);food.tick(owner);}
             c.assertTrue(food.getFoodLevel()==10&&food.getSaturationLevel()==5,"All spear materials must have zero lunge exhaustion: "+item);
             var victim=c.spawn(EntityTypes.COW,new BlockPos(3,2,3));victim.setPos(owner.position().add(0,0,3.5));float health=victim.getHealth();
-            for(int i=0;i<50;i++){((dev.acceleration.mixin.EntityInvulnerabilityAccess)victim).acceleration$setInvulnerableTime(0);owner.stabAttack(EquipmentSlot.MAINHAND,victim,.01F,true,false,false);food.tick(owner);}
+            for(int i=0;i<50;i++){victim.damageCooldownTime=0;owner.stabAttack(EquipmentSlot.MAINHAND,victim,.01F,true,false,false);food.tick(owner);}
             c.assertTrue(victim.getHealth()<health&&food.getFoodLevel()==10&&food.getSaturationLevel()==5,"Successful combat stabs must also cost no exhaustion for every spear material: "+item);victim.discard();
         }
         owner.causeFoodExhaustion(5);food.tick(owner);c.assertTrue(food.getSaturationLevel()==4,"Normal sprint/damage hunger outside spear actions must remain vanilla");c.succeed();
