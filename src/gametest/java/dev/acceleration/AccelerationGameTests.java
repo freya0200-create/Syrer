@@ -59,6 +59,31 @@ public final class AccelerationGameTests {
         if(SoulMode.active(player)&&player.getMainHandItem().is(AccelerationMod.SPEAR)&&!SoulMode.ownBody(player,target))chargeSpear(player);
         return net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(player,world,hand,target,hit);
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:h_key_brings_body_to_ghost_without_moving_player")
+    public void hKeyBringsBodyToGhostWithoutMovingPlayer(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 anchor=owner.position(),ghost=anchor.add(5,2,0),momentum=new Vec3(.35,.12,-.2);
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.BRING_BODY)&&!SoulMode.active(owner),"H outside ghost mode must do nothing");
+        AccelerationMod.toggleAcceleration(owner);owner.setSprinting(true);
+        for(int i=0;i<100;i++)AccelerationMod.accelerationTick(owner);
+        long charge=AccelerationMod.charge(owner);
+        c.assertTrue(SoulMode.begin(owner,anchor),"Projection must begin");var linked=body(c,owner);
+        owner.setPos(ghost);owner.setDeltaMovement(momentum);owner.setYRot(53);owner.setXRot(-12);owner.setHealth(18);
+        owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.GOLDEN_CARROT));
+        try{
+            var counter=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("awaitingTeleport");counter.setAccessible(true);int before=counter.getInt(owner.connection);
+            c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.BRING_BODY),"H action must bring the body to the ghost without requiring the spear in hand");
+            c.assertTrue(counter.getInt(owner.connection)==before,"H must not send a teleport correction when reuniting in place");
+        }catch(ReflectiveOperationException error){throw new RuntimeException(error);}
+        c.assertTrue(!SoulMode.active(owner)&&linked.isRemoved()&&!ProjectionPhysics.active(owner),"H must remove the linked body and return to normal form");
+        c.assertTrue(owner.position().distanceToSqr(ghost)<1e-10&&owner.getDeltaMovement().distanceToSqr(momentum)<1e-10,"H must preserve current ghost position and momentum instead of recalling to the anchor");
+        c.assertTrue(owner.getYRot()==53&&owner.getXRot()==-12&&owner.getHealth()==18&&owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().flying,"H must preserve camera, real health and Survival controls");
+        c.assertTrue(AccelerationMod.charge(owner)==charge&&AccelerationMod.accelerationEnabled(owner),"H must preserve acceleration charge and the I toggle");
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.BRING_BODY)&&owner.position().distanceToSqr(ghost)<1e-10,"Repeated H in normal form must do nothing");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));
+        EnchantmentHelper.doPostPiercingAttackEffects(c.getLevel(),owner);
+        c.assertTrue(!SoulMode.active(owner),"A same-tick native post-lunge callback must not reopen projection after H");c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ordinary_items_share_spear_recharge_and_restore_weapon_timings")
     public void ordinaryItemsShareSpearRechargeAndRestoreWeaponTimings(GameTestHelper c){
         setup(c);var owner=player(c);var speed=net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED;

@@ -45,7 +45,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.6.5+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.6.6+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -113,3 +113,5 @@ OP commands (both /accleration and /acceleration): speed add <percent>, speed se
 1.6.4: Ghost Spear attack speed is 10 attacks/second (0.1-second cooldown and two-tick stab animation). Native right-click charge is three ticks (0.15 seconds), with two-tick contact cooldown; the actual attack/charge indicators follow these timings. Existing spears migrate their attributes, kinetic timings and animation. The 1.5.9 performance changes have been reverted; later gameplay fixes remain, including smooth no-dash hits, fire, Density/Breach and preserving acceleration while spearing.
 
 1.6.5: Ordinary held items without weapon components or custom attack-speed/damage modifiers now grant the same 10 attacks/second (0.1-second melee recharge and hit indicator) as the Ghost Spear. Examples include ender pearls, golden carrots, blocks and torches. Weapons, ranged weapons, tools with their own combat attributes, custom attack-speed items, offhand items and empty hands retain their existing timings. Eating, throwing and other right-click use cooldowns are unchanged. Uses native equipment attributes on client and server without rewriting item stacks.
+
+1.6.6: Press H during ghost mode to bring your body to your current position and return to normal. It preserves your position, view direction, health and momentum, with no forced teleport. H does nothing outside ghost mode and can be rebound in Controls > Key Binds. Other controls and combat behavior are unchanged.

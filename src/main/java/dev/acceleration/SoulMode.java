@@ -94,6 +94,10 @@ public final class SoulMode {
         world.playSound(null,anchor.x,anchor.y,anchor.z,SoundEvents.SOUL_ESCAPE,SoundSource.PLAYERS,1,1);
         return true;
     }
+    /** Bring the linked body to the current ghost, preserving position and momentum. */
+    public static boolean bringBodyToGhost(ServerPlayer player){
+        return player.isAlive()&&active(player)&&finishFromHit(player,player.position());
+    }
     /** Null destination returns to the anchor; a non-null position reunites the body there. */
     public static boolean finish(ServerPlayer player,Vec3 destination){
         var state=SoulState.get(player.level().getServer());var session=state.projection(player.getUUID());if(session==null)return false;
