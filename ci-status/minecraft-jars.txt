@@ -1,7 +1,0 @@
-/home/runner/.gradle/caches/fabric-loom/26.3/minecraft-client.jar
-/home/runner/.gradle/caches/fabric-loom/26.3/minecraft-extracted_server.jar
-/home/runner/.gradle/caches/fabric-loom/26.3/minecraft-common.jar
-/home/runner/.gradle/caches/fabric-loom/26.3/minecraft-client-only.jar
-/home/runner/.gradle/caches/fabric-loom/26.3/minecraft-server.jar
-/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-common-deobf/26.3/minecraft-common-deobf-26.3.jar
-/home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-clientonly-deobf/26.3/minecraft-clientonly-deobf-26.3.jar

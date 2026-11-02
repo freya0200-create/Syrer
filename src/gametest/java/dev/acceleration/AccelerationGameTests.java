@@ -320,10 +320,11 @@ public final class AccelerationGameTests {
         owner.setPos(start);owner.connection.resetPosition();
         owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(1,0,0),true,false));
         c.assertTrue(Math.abs(owner.getX()-start.x-1)<1e-6,"The server must accept a real movement packet entering the wall, without rubber-banding");
+        owner.connection.handleClientTickEnd(net.minecraft.network.protocol.game.ServerboundClientTickEndPacket.INSTANCE);
         c.runAtTickTime(2,()->{
-            owner.connection.tick();
             owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(2,0,0),true,false));
-            c.assertTrue(Math.abs(owner.getX()-start.x-2)<1e-6,"The next game tick's movement packet must emerge on the other side; moved="+(owner.getX()-start.x));
+            owner.connection.handleClientTickEnd(net.minecraft.network.protocol.game.ServerboundClientTickEndPacket.INSTANCE);
+            c.assertTrue(Math.abs(owner.getX()-start.x-2)<1e-6,"The next client tick's movement packet must emerge on the other side; moved="+(owner.getX()-start.x));
             c.assertTrue(BlockPhasing.stop(owner),"Phasing must disable after moving through the wall");c.succeed();
         });
     }
