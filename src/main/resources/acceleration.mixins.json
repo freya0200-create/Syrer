@@ -25,7 +25,8 @@
     "BlockPhasingMixin",
     "PhasingMovementMixin",
     "GhostJoustMixin",
-    "SpearDensityMixin"
+    "SpearDensityMixin",
+    "NonWeaponAttackSpeedMixin"
   ],
   "injectors": {
     "defaultRequire": 1

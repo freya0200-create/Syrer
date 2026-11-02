@@ -59,6 +59,31 @@ public final class AccelerationGameTests {
         if(SoulMode.active(player)&&player.getMainHandItem().is(AccelerationMod.SPEAR)&&!SoulMode.ownBody(player,target))chargeSpear(player);
         return net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(player,world,hand,target,hit);
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ordinary_items_share_spear_recharge_and_restore_weapon_timings")
+    public void ordinaryItemsShareSpearRechargeAndRestoreWeaponTimings(GameTestHelper c){
+        setup(c);var owner=player(c);var speed=net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED;
+        for(var item:List.of(Items.ENDER_PEARL,Items.GOLDEN_CARROT,Items.GOLDEN_APPLE,Items.COBBLESTONE,Items.TORCH)){
+            var stack=new ItemStack(item,16);owner.setItemSlot(EquipmentSlot.MAINHAND,stack);owner.doTick();
+            c.assertTrue(Math.abs(owner.getAttributeValue(speed)-10)<1e-6&&Math.abs(owner.getCurrentItemAttackStrengthDelay()-2)<1e-6,"Ordinary item must have ten attacks/second and a two-tick native hit-indicator recharge: "+item);
+            c.assertTrue(stack.getCount()==16&&!stack.has(DataComponents.WEAPON),"Attack speed must not rewrite the stack or make it a weapon");
+        }
+        owner.resetOnlyAttackStrengthTicker();owner.doTick();owner.doTick();
+        c.assertTrue(owner.getAttackStrengthScale(0)>=1,"Native attack indicator must be fully charged after two ticks");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.NETHERITE_SWORD));owner.doTick();
+        c.assertTrue(Math.abs(owner.getAttributeValue(speed)-1.6)<1e-5,"Switching to a sword must remove the ordinary-item boost and preserve its own attack speed");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,AccelerationSpear.create(c.getLevel()));owner.doTick();
+        c.assertTrue(Math.abs(owner.getAttributeValue(speed)-10)<1e-6,"Ghost Spear must retain its existing speed without stacking the ordinary-item boost");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,ItemStack.EMPTY);owner.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.GOLDEN_CARROT));owner.doTick();
+        c.assertTrue(Math.abs(owner.getAttributeValue(speed)-4)<1e-6,"Empty main hand and offhand food must keep native empty-hand attack speed");
+        var custom=new ItemStack(Items.GOLDEN_CARROT);
+        custom.set(DataComponents.ATTRIBUTE_MODIFIERS,net.minecraft.world.item.component.ItemAttributeModifiers.builder().add(speed,new net.minecraft.world.entity.ai.attributes.AttributeModifier(AccelerationMod.id("test_custom_speed"),-2,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE),EquipmentSlotGroup.MAINHAND).build());
+        owner.setItemSlot(EquipmentSlot.MAINHAND,custom);owner.doTick();
+        c.assertTrue(Math.abs(owner.getAttributeValue(speed)-2)<1e-6,"An item with explicit custom attack speed must be preserved");
+        owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.BOW));owner.doTick();
+        c.assertTrue(Math.abs(owner.getAttributeValue(speed)-4)<1e-6,"Ranged weapons must not receive the ordinary-item modifier");
+        c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:spear_use_and_hits_preserve_acceleration_through_reunion")
     public void spearUseAndHitsPreserveAccelerationThroughReunion(GameTestHelper c){
         setup(c);var owner=player(c);AccelerationMod.toggleAcceleration(owner);owner.setSprinting(true);
