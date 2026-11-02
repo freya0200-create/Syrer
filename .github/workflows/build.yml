@@ -42,7 +42,7 @@ jobs:
           from pathlib import Path
           text=Path('ci-status/client-signatures.txt').read_text()
           assert 'moveTowardsClosestSpace(double, double)' in text, 'Local-player phasing hook changed'
-          assert 'getViewBlockingState(net.minecraft.world.entity.player.Player)' in text, 'Block overlay hook changed'
+          assert 'submitBlockSprite(net.minecraft.resources.Identifier, float, float, float, float,' in text, 'Block overlay hook changed'
           assert any('shouldRender(' in line and 'Frustum' in line for line in text.splitlines()), 'Ghost visibility hook changed'
           print('Client injection signatures verified for 26.3')
           PY

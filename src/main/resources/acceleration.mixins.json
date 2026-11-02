@@ -26,7 +26,8 @@
     "PhasingMovementMixin",
     "GhostJoustMixin",
     "SpearDensityMixin",
-    "NonWeaponAttackSpeedMixin"
+    "NonWeaponAttackSpeedMixin",
+    "EntityInvulnerabilityAccess"
   ],
   "injectors": {
     "defaultRequire": 1

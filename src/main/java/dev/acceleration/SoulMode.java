@@ -197,7 +197,7 @@ public final class SoulMode {
             DamageSource source=new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(STRIKE),player);
             boolean hit=false;
             for(Entity target:pierced.values()){
-                target.setInvulnerableTime(0);
+                ((dev.acceleration.mixin.EntityInvulnerabilityAccess)target).acceleration$setInvulnerableTime(0);
                 if(target instanceof net.minecraft.world.entity.boss.wither.WitherBoss wither)wither.setInvulnerableTicks(0);
                 boolean damaged=target instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon?
                     dragon.hurt(world,dragon.head,source,STRIKE_DAMAGE):target.hurtServer(world,source,STRIKE_DAMAGE);

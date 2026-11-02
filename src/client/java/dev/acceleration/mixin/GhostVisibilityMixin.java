@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(EntityRenderDispatcher.class)
 public abstract class GhostVisibilityMixin {
     @Inject(method="shouldRender",at=@At("HEAD"),cancellable=true)
-    private void acceleration$hideOtherGhosts(Entity entity,Frustum frustum,double x,double y,double z,CallbackInfoReturnable<Boolean> ci){
+    private void acceleration$hideOtherGhosts(Entity entity,Frustum frustum,double x,double y,double z,float partialTick,CallbackInfoReturnable<Boolean> ci){
         if(ProjectionPhysics.hiddenFrom(entity,Minecraft.getInstance().player))ci.setReturnValue(false);
     }
 }
