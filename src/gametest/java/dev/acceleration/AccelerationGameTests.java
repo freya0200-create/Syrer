@@ -313,7 +313,9 @@ public final class AccelerationGameTests {
         BlockPhasing.toggle(owner);
         try{
             var field=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("awaitingTeleport");field.setAccessible(true);
-            owner.connection.handleAcceptTeleportPacket(new net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket(field.getInt(owner.connection)));
+            var positionField=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("awaitingPositionFromClient");positionField.setAccessible(true);
+            Vec3 accepted=(Vec3)positionField.get(owner.connection);if(accepted==null)accepted=owner.position();
+            owner.connection.handleAcceptTeleportPacket(new net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket(field.getInt(owner.connection),accepted.x,accepted.y,accepted.z,owner.getYRot(),owner.getXRot()));
         }catch(ReflectiveOperationException error){throw new RuntimeException(error);}
         owner.setPos(start);owner.connection.resetPosition();
         owner.connection.handleMovePlayer(new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Pos(start.add(1,0,0),true,false));

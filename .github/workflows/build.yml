@@ -28,10 +28,28 @@ jobs:
           printf '%s\n' "$result" > ci-status/exit-code.txt
           tail -n 180 ci-status/build.log
           exit "$result"
+      - name: Validate client injection targets
+        id: hooks
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p ci-status
+          native_jar=$(find "$HOME/.gradle/caches/fabric-loom" -name '*common-deobf*26.3*.jar' -print -quit)
+          client_jar=$(find "$HOME/.gradle/caches/fabric-loom" -name '*clientonly-deobf*26.3*.jar' -print -quit)
+          javap -p -classpath "$client_jar:$native_jar" net.minecraft.client.player.LocalPlayer net.minecraft.client.renderer.ScreenEffectRenderer net.minecraft.client.renderer.entity.EntityRenderDispatcher > ci-status/client-signatures.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('ci-status/client-signatures.txt').read_text()
+          assert 'moveTowardsClosestSpace(double, double)' in text, 'Local-player phasing hook changed'
+          assert 'getViewBlockingState(net.minecraft.world.entity.player.Player)' in text, 'Block overlay hook changed'
+          assert any('shouldRender(' in line and 'Frustum' in line for line in text.splitlines()), 'Ghost visibility hook changed'
+          print('Client injection signatures verified for 26.3')
+          PY
       - name: Save reviewable build result and successful mod artifact
         if: always()
         env:
-          BUILD_RESULT: ${{ steps.compile.outcome }}
+          BUILD_RESULT: ${{ steps.compile.outcome == 'success' && steps.hooks.outcome == 'success' && 'success' || 'failure' }}
         shell: bash
         run: |
           mkdir -p ci-status
