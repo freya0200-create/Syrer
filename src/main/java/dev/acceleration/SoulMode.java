@@ -25,6 +25,9 @@ public final class SoulMode {
     private static boolean finishFromHit(ServerPlayer player,Vec3 destination){
         HIT_RETURNS.put(player.getUUID(),player.level().getGameTime());return finish(player,destination);
     }
+    public static boolean bringBodyToGhost(ServerPlayer player){
+        return player.isAlive()&&active(player)&&finishFromHit(player,player.position());
+    }
     public static void afterMeleeHit(Entity victim,DamageSource source,boolean hit){
         if(hit&&source.getEntity() instanceof ServerPlayer actor&&source.getDirectEntity()==actor
                 &&victim!=actor&&active(actor)&&!STRIKING.contains(actor.getUUID())&&!ownBody(actor,victim)){

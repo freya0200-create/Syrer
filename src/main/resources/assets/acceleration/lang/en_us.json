@@ -6,5 +6,6 @@
   "key.acceleration.activate_momentum": "Toggle Acceleration",
   "key.category.acceleration.controls": "Acceleration Mod",
   "key.acceleration.phase": "Toggle Block Phasing",
-  "key.acceleration.phase_mode": "Cycle Phasing Mode"
+  "key.acceleration.phase_mode": "Cycle Phasing Mode",
+  "key.acceleration.bring_body": "Bring Body to Ghost"
 }

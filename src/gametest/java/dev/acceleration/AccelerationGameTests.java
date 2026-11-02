@@ -59,6 +59,26 @@ public final class AccelerationGameTests {
         if(SoulMode.active(player)&&player.getMainHandItem().is(AccelerationMod.SPEAR)&&!SoulMode.ownBody(player,target))chargeSpear(player);
         return net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT.invoker().interact(player,world,hand,target,hit);
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:h_key_brings_body_to_current_ghost_position")
+    public void hKeyBringsBodyToCurrentGhostPosition(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 anchor=owner.position(),ghost=anchor.add(6,3,2),momentum=new Vec3(.3,.1,-.2);
+        c.assertTrue(!SoulPackets.handleAction(owner,SoulPackets.BRING_BODY)&&!SoulMode.active(owner),"H must do nothing outside ghost mode");
+        AccelerationMod.toggleAcceleration(owner);owner.setSprinting(true);for(int i=0;i<100;i++)AccelerationMod.accelerationTick(owner);
+        long charge=AccelerationMod.charge(owner);
+        c.assertTrue(SoulMode.begin(owner,anchor),"Ghost mode must begin");var linked=body(c,owner);
+        owner.getInventory().setItem(20,owner.getMainHandItem().copy());owner.setItemSlot(EquipmentSlot.MAINHAND,new ItemStack(Items.GOLDEN_CARROT));
+        owner.setPos(ghost);owner.setDeltaMovement(momentum);owner.setYRot(37);owner.setXRot(-12);
+        try{
+            var counter=net.minecraft.server.network.ServerGamePacketListenerImpl.class.getDeclaredField("awaitingTeleport");counter.setAccessible(true);int before=counter.getInt(owner.connection);
+            c.assertTrue(SoulPackets.handleAction(owner,SoulPackets.BRING_BODY),"H action must bring the body even with food held");
+            c.assertTrue(!SoulMode.active(owner)&&!ProjectionPhysics.active(owner)&&linked.isRemoved()&&owner.gameMode()==GameType.SURVIVAL,"H must end ghost mode and remove the linked body");
+            c.assertTrue(owner.position().distanceToSqr(ghost)<1e-10&&owner.getDeltaMovement().distanceToSqr(momentum)<1e-10&&owner.getYRot()==37&&owner.getXRot()==-12,"H must bring the body to the ghost while retaining position, view and momentum");
+            c.assertTrue(counter.getInt(owner.connection)==before&&AccelerationMod.charge(owner)==charge&&AccelerationMod.accelerationEnabled(owner),"H must not teleport the player or clear acceleration");
+            c.assertTrue(SoulMode.hitReturnedThisTick(owner)&&!SoulPackets.handleAction(owner,SoulPackets.BRING_BODY),"H must prevent same-tick reprojection and repeated recall must be harmless");
+        }catch(ReflectiveOperationException error){throw new RuntimeException(error);}
+        c.succeed();
+    }
+
     @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:ordinary_items_share_spear_recharge_and_restore_weapon_timings")
     public void ordinaryItemsShareSpearRechargeAndRestoreWeaponTimings(GameTestHelper c){
         setup(c);var owner=player(c);var speed=net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED;

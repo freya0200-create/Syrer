@@ -47,7 +47,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.7.0+mc26.3.jar` and Fabric API for 26.3 in the correct instance's `mods` folder. Launch **Minecraft Java 26.3 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.7.1+mc26.3.jar` and Fabric API for 26.3 in the correct instance's `mods` folder. Launch **Minecraft Java 26.3 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 
@@ -117,3 +117,5 @@ OP commands (both /accleration and /acceleration): speed add <percent>, speed se
 1.6.5: Ordinary held items without weapon components or custom attack-speed/damage modifiers now grant the same 10 attacks/second (0.1-second melee recharge and hit indicator) as the Ghost Spear. Examples include ender pearls, golden carrots, blocks and torches. Weapons, ranged weapons, tools with their own combat attributes, custom attack-speed items, offhand items and empty hands retain their existing timings. Eating, throwing and other right-click use cooldowns are unchanged. Uses native equipment attributes on client and server without rewriting item stacks.
 
 Prism metadata download troubleshooting: the error “Could not download metadata for Minecraft 26.3” occurs before mod loading. Update Prism Launcher, then retry a clean 26.3 instance. If its default metadata endpoint remains unreachable, Settings > APIs > Metadata Server can use Prism’s own generated metadata repository at https://raw.githubusercontent.com/PrismLauncher/meta-launcher/master/ . Save and restart Prism. Downloading game files still requires access to Mojang’s download servers.
+
+1.7.1: H brings the linked body to the current ghost position and returns to normal form. Position, view direction, momentum and acceleration charge are preserved; the key is ignored outside ghost mode and while a menu is open. It works with another item held and can be rebound in Controls.

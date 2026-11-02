@@ -3,7 +3,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.*;
 public final class AccelerationClient implements ClientModInitializer {
     public static boolean projecting;
-    private static net.minecraft.client.KeyMapping momentumKey,phaseKey,phaseModeKey;
+    private static net.minecraft.client.KeyMapping momentumKey,phaseKey,phaseModeKey,bringBodyKey;
     @SuppressWarnings({"unchecked","rawtypes"})
     @Override public void onInitializeClient(){
         var category=net.minecraft.client.KeyMapping.Category.register(AccelerationMod.id("controls"));
@@ -13,7 +13,14 @@ public final class AccelerationClient implements ClientModInitializer {
             "key.acceleration.phase",com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_6,category));
         phaseModeKey=net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping(
             "key.acceleration.phase_mode",com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_7,category));
+        bringBodyKey=net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping(
+            "key.acceleration.bring_body",com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_H,category));
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client->{
+            while(bringBodyKey.consumeClick()){
+                if(client.player!=null&&client.level!=null&&client.gui.screen()==null&&client.gui.overlay()==null
+                        &&ClientPlayNetworking.canSend(SoulPackets.Action.TYPE))
+                    ClientPlayNetworking.send(new SoulPackets.Action(SoulPackets.BRING_BODY));
+            }
             while(phaseModeKey.consumeClick()){
                 if(client.player!=null&&client.level!=null&&client.gui.screen()==null&&client.gui.overlay()==null&&ClientPlayNetworking.canSend(SoulPackets.Action.TYPE))
                     ClientPlayNetworking.send(new SoulPackets.Action(SoulPackets.CYCLE_PHASING));
