@@ -1,0 +1,101 @@
+Fetching distribution.
+Downloading https://services.gradle.org/distributions/gradle-9.7.1-bin.zip
+..............10%..............20%...............30%..............40%...............50%..............60%...............70%..............80%..............90%...............100%
+
+Welcome to Gradle 9.7.1!
+
+Here are the highlights of this release:
+ - Isolated Projects graduates to incubating
+ - Broader Configuration Cache compatibility
+ - Resilient Sync helps you fix broken builds
+ - More source locations in problem reports
+
+For more details see https://docs.gradle.org/9.7.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :
+Fabric Loom: 1.18.4
+
+> Task :compileJava
+> Task :processResources
+> Task :classes
+
+> Task :compileClientJava FAILED
+/home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:11: error: cannot find symbol
+            "key.acceleration.activate_momentum",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_I,category));
+                                                                                                ^
+  symbol:   variable KEYSYM
+  location: class Type
+/home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:11: error: package org.lwjgl.glfw does not exist
+            "key.acceleration.activate_momentum",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_I,category));
+                                                                                                                      ^
+/home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:13: error: cannot find symbol
+            "key.acceleration.phase",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_6,category));
+                                                                                    ^
+  symbol:   variable KEYSYM
+  location: class Type
+/home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:13: error: package org.lwjgl.glfw does not exist
+            "key.acceleration.phase",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_6,category));
+                                                                                                          ^
+/home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:15: error: cannot find symbol
+            "key.acceleration.phase_mode",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_7,category));
+                                                                                         ^
+  symbol:   variable KEYSYM
+  location: class Type
+/home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:15: error: package org.lwjgl.glfw does not exist
+            "key.acceleration.phase_mode",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_7,category));
+                                                                                                               ^
+Note: /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+6 errors
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/compile-1793607444575.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/Syrer/Syrer/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileClientJava' (registered by plugin class 'org.gradle.api.plugins.JavaBasePlugin').
+> Compilation failed; see the compiler output below.
+  Note: /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java uses or overrides a deprecated API.
+  Note: Recompile with -Xlint:deprecation for details.
+  /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:11: error: cannot find symbol
+              "key.acceleration.activate_momentum",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_I,category));
+                                                                                                  ^
+    symbol:   variable KEYSYM
+    location: class Type
+  /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:13: error: cannot find symbol
+              "key.acceleration.phase",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_6,category));
+                                                                                      ^
+    symbol:   variable KEYSYM
+    location: class Type
+  /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:15: error: cannot find symbol
+              "key.acceleration.phase_mode",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_7,category));
+                                                                                           ^
+    symbol:   variable KEYSYM
+    location: class Type
+  /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:11: error: package org.lwjgl.glfw does not exist
+              "key.acceleration.activate_momentum",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_I,category));
+                                                                                                                        ^
+  /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:13: error: package org.lwjgl.glfw does not exist
+              "key.acceleration.phase",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_6,category));
+                                                                                                            ^
+  /home/runner/work/Syrer/Syrer/src/client/java/dev/acceleration/AccelerationClient.java:15: error: package org.lwjgl.glfw does not exist
+              "key.acceleration.phase_mode",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_7,category));
+                                                                                                                 ^
+  6 errors
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.7.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 45s
+3 actionable tasks: 3 executed
