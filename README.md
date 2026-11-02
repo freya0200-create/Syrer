@@ -1,3 +1,5 @@
+Minecraft Java 26.3 port: Java 25, Fabric Loader 0.20.1+ and Fabric API 0.165.0+26.3.
+
 # Acceleration Mod
 
 An original Minecraft **Java 26.2 / Fabric** implementation of the dragon-reward spear and soul ability described by the player. Requires **Java 25**, **Fabric Loader 0.19.5+**, and **Fabric API 0.161.0+26.2** or a compatible newer Fabric API for 26.2. Install on both the server and every client. It is a separate mod from Scyer; neither depends on the other.
@@ -45,7 +47,7 @@ The registered item is `acceleration:acceleration_spear`. Ordinary `/give` and C
 
 ## Install
 
-Place `acceleration-1.6.5+mc26.2.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
+Place `acceleration-1.7.0+mc26.3.jar` and Fabric API for 26.2 in the correct instance's `mods` folder. Launch **Minecraft Java 26.2 with Fabric**. Install the same mod version on all participating clients and the server. Scyer is optional and remains a separate JAR.
 
 ## Development and validation
 

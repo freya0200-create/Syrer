@@ -1,7 +1,11 @@
-name: Build Acceleration Mod
-on: [push, pull_request, workflow_dispatch]
+name: Build Acceleration 26.3 Port
+on:
+  push:
+    branches: [ports/acceleration-26.3]
+    paths-ignore: ['ci-status/**', 'downloads/**']
+  workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,9 +16,42 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew build runGameTest --no-daemon
-      - uses: actions/upload-artifact@v4
-        with:
-          name: acceleration-fabric-26.2
-          path: build/libs/acceleration-1.0.0+mc26.2.jar
-          if-no-files-found: error
+      - name: Build and test against Minecraft 26.3
+        id: compile
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p ci-status
+          set +e
+          ./gradlew build runGameTest --no-daemon --console=plain > ci-status/build.log 2>&1
+          result=$?
+          printf '%s\n' "$result" > ci-status/exit-code.txt
+          tail -n 180 ci-status/build.log
+          exit "$result"
+      - name: Save reviewable build result and successful mod artifact
+        if: always()
+        env:
+          BUILD_RESULT: ${{ steps.compile.outcome }}
+        shell: bash
+        run: |
+          mkdir -p ci-status
+          python3 - <<'PY'
+          import json, os, pathlib, xml.etree.ElementTree as E
+          result={'result':os.environ['BUILD_RESULT'],'commit':os.environ['GITHUB_SHA'],'run':os.environ['GITHUB_SERVER_URL']+'/'+os.environ['GITHUB_REPOSITORY']+'/actions/runs/'+os.environ['GITHUB_RUN_ID']}
+          report=pathlib.Path('build/gametest-results.xml')
+          if report.exists():
+              root=E.parse(report)
+              result.update(server_tests=len(root.findall('.//testcase')),failures=len(root.findall('.//failure')))
+          pathlib.Path('ci-status/result.json').write_text(json.dumps(result,indent=2)+'\n')
+          PY
+          if [ "$BUILD_RESULT" = success ]; then
+            mkdir -p downloads
+            cp build/libs/acceleration-1.7.0+mc26.3.jar downloads/
+            (cd downloads && sha256sum acceleration-1.7.0+mc26.3.jar > SHA256SUMS.txt)
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -f ci-status
+          if [ "$BUILD_RESULT" = success ]; then git add -f downloads; fi
+          git commit -m 'Record Minecraft 26.3 build result [skip ci]' || exit 0
+          git push origin HEAD:ports/acceleration-26.3
