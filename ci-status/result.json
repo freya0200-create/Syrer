@@ -1,0 +1,7 @@
+{
+  "result": "failure",
+  "commit": "3e94306a29adbd016b1ba5ea2eff064fa71f9d40",
+  "run": "https://github.com/freya0200-create/Syrer/actions/runs/41414034673",
+  "server_tests": 53,
+  "failures": 3
+}
