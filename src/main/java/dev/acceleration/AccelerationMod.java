@@ -100,7 +100,7 @@ public final class AccelerationMod implements ModInitializer {
             .then(Commands.literal("return").executes(context->SoulMode.finish(context.getSource().getPlayerOrException(),null)?1:0))
             .then(Commands.literal("give").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(context->{
                 var player=context.getSource().getPlayerOrException();var stack=AccelerationSpear.create(player.level());
-                if(!player.getInventory().add(stack))player.drop(stack,false);context.getSource().sendSuccess(()->Component.literal("Ghost Spear granted."),false);return 1;
+                if(!player.getInventory().add(stack))player.drop(stack,false,net.minecraft.util.Prediction.SERVER_ONLY);context.getSource().sendSuccess(()->Component.literal("Ghost Spear granted."),false);return 1;
             }))
             .then(Commands.literal("project").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(context->{
                 var player=context.getSource().getPlayerOrException();return SoulMode.begin(player,player.position())?1:0;

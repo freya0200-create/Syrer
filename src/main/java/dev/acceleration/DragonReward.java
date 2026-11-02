@@ -16,7 +16,7 @@ public final class DragonReward {
             if(world.getBlockState(at).is(Blocks.DRAGON_EGG)){top=at.above();break outer;}
         }
         ItemEntity reward=new ItemEntity(world,top.getX()+.5,top.getY()+.5,top.getZ()+.5,AccelerationSpear.create(world));
-        reward.setDeltaMovement(0,0,0);reward.setUnlimitedLifetime();reward.setInvulnerable(true);reward.setPickUpDelay(20);
+        reward.setDeltaMovement(0,0,0);reward.setUnlimitedLifetime();reward.setPermanentlyInvulnerable(true);reward.setPickUpDelay(20);
         if(!world.addFreshEntity(reward))return false;state.reward(dragon);return true;
     }
 }

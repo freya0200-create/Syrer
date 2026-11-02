@@ -58,7 +58,7 @@ public final class AccelerationSpear extends Item {
         var kinetic=fastKineticWeapon();
         if(!kinetic.equals(stack.get(DataComponents.KINETIC_WEAPON)))stack.set(DataComponents.KINETIC_WEAPON,kinetic);
         var swing=new net.minecraft.world.item.component.SwingAnimation(net.minecraft.world.item.SwingAnimationType.STAB,2);
-        if(!swing.equals(stack.get(DataComponents.SWING_ANIMATION)))stack.set(DataComponents.SWING_ANIMATION,swing);
+        if(!swing.equals(stack.get(DataComponents.ATTACK_ANIMATION)))stack.set(DataComponents.ATTACK_ANIMATION,swing);
         if(!CLOSE_RANGE.equals(stack.get(DataComponents.ATTACK_RANGE)))stack.set(DataComponents.ATTACK_RANGE,CLOSE_RANGE);
         var attributes=combatAttributes();
         if(!attributes.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS)))stack.set(DataComponents.ATTRIBUTE_MODIFIERS,attributes);

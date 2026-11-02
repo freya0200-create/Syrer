@@ -37,7 +37,7 @@ jobs:
           mkdir -p ci-status
           native_jar=$(find "$HOME/.gradle/caches/fabric-loom" -name '*common-deobf*26.3*.jar' -print -quit)
           if [ -n "$native_jar" ]; then
-            javap -p -classpath "$native_jar" net.minecraft.world.entity.Entity net.minecraft.server.level.ServerPlayer net.minecraft.world.entity.player.Player net.minecraft.core.component.DataComponents 'net.minecraft.world.item.Item$Properties' > ci-status/minecraft-signatures.txt 2>&1 || true
+            javap -p -classpath "$native_jar" net.minecraft.world.entity.Entity net.minecraft.server.level.ServerPlayer net.minecraft.world.entity.player.Player net.minecraft.util.Prediction net.minecraft.world.entity.LivingEntity net.minecraft.core.component.DataComponents 'net.minecraft.world.item.Item$Properties' > ci-status/minecraft-signatures.txt 2>&1 || true
           fi
           find "$HOME/.gradle/caches/fabric-loom" -name '*.jar' > ci-status/minecraft-jars.txt
           python3 - <<'PY'
