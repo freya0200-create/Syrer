@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
 }
 
-version = '1.7.1+mc26.3'
+version = '1.7.2+mc26.3'
 group = 'dev.acceleration'
 base { archivesName = 'acceleration' }
 

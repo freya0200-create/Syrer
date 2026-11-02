@@ -466,6 +466,32 @@ public final class AccelerationGameTests {
             SoulMode.finish(owner,owner.position());c.assertTrue(owner.gameMode()==GameType.SURVIVAL&&!owner.getAbilities().invulnerable&&!owner.getAbilities().instabuild,"Reuniting must not give Creative powers");c.succeed();
         });
     }
+    @GameTest(maxTicks=80,padding=32,environment="acceleration_gametest:body_damage_preserves_ghost_momentum_and_normal_knockback")
+    public void bodyDamagePreservesGhostMomentumAndNormalKnockback(GameTestHelper c){
+        setup(c);var owner=player(c);Vec3 anchor=owner.position(),ghost=anchor.add(7,3,0),momentum=new Vec3(.45,.7,-.2);
+        var attacker=player(c);attacker.setPos(anchor.add(0,0,-1));
+        var sword=new ItemStack(Items.IRON_SWORD);sword.enchant(c.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.KNOCKBACK),2);
+        attacker.setItemSlot(EquipmentSlot.MAINHAND,sword);for(int i=0;i<20;i++)attacker.doTick();
+        var zombie=c.spawn(EntityTypes.ZOMBIE,new BlockPos(3,2,3));zombie.setNoAi(true);zombie.setPos(anchor.add(1,0,0));
+        zombie.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_KNOCKBACK).setBaseValue(1);
+        c.assertTrue(SoulMode.begin(owner,anchor),"Projection must begin");var linked=body(c,owner);owner.setPos(ghost);owner.setOnGround(true);
+        owner.setDeltaMovement(Vec3.ZERO);owner.syncVelocity=false;owner.needsSync=false;float health=owner.getHealth();
+        c.assertTrue(zombie.doHurtTarget(c.getLevel(),linked)&&owner.getHealth()<health,"A native zombie attack must still damage the owner through the body");
+        c.assertTrue(owner.getDeltaMovement().equals(Vec3.ZERO)&&!owner.syncVelocity&&!owner.needsSync,"A body hit must not launch a stationary ghost or request a knockback packet");
+        c.assertTrue(SoulMode.active(owner)&&!linked.isRemoved()&&owner.position().distanceToSqr(ghost)<1e-10,"External body damage must leave the ghost and anchor active");
+        owner.setHealth(20);owner.damageCooldownTime=0;owner.setDeltaMovement(momentum);
+        c.assertTrue(linked.hurtServer(c.getLevel(),c.getLevel().damageSources().playerAttack(attacker),4)&&owner.getHealth()==16,"A direct body hit must retain its ordinary damage");
+        c.assertTrue(owner.getDeltaMovement().equals(momentum)&&!owner.syncVelocity&&!owner.needsSync,"Body damage must retain existing horizontal and upward momentum and clear only its own motion flags");
+        owner.setHealth(20);owner.damageCooldownTime=0;owner.syncVelocity=true;owner.needsSync=true;linked.setDeltaMovement(Vec3.ZERO);attacker.setSprinting(true);
+        attacker.attack(linked);
+        c.assertTrue(owner.getHealth()<20&&linked.getDeltaMovement().lengthSqr()>.001,"Native sprint and Knockback II must still attack the linked body and run their extra-knockback path");
+        c.assertTrue(owner.getDeltaMovement().equals(momentum)&&owner.syncVelocity&&owner.needsSync&&SoulMode.active(owner),"A sprint/Knockback sword hit must retain ghost momentum and pre-existing motion sync flags");
+        owner.setHealth(20);owner.damageCooldownTime=0;owner.setItemSlot(EquipmentSlot.OFFHAND,new ItemStack(Items.TOTEM_OF_UNDYING));
+        c.assertTrue(linked.hurtServer(c.getLevel(),c.getLevel().damageSources().mobAttack(zombie),1000)&&owner.isAlive()&&owner.getHealth()==1&&owner.getOffhandItem().isEmpty(),"Suppressing body knockback must still consume exactly one real totem on lethal damage");
+        c.assertTrue(SoulMode.active(owner)&&owner.getDeltaMovement().equals(momentum),"Totem protection through the body must preserve projection and momentum");
+        SoulMode.finish(owner,owner.position());owner.removeAllEffects();owner.setHealth(20);owner.damageCooldownTime=0;owner.setDeltaMovement(Vec3.ZERO);owner.setOnGround(true);
+        c.assertTrue(zombie.doHurtTarget(c.getLevel(),owner)&&owner.getHealth()<20&&owner.getDeltaMovement().lengthSqr()>.001,"Ordinary body-mode damage and knockback must remain native");c.succeed();
+    }
     @GameTest(maxTicks=240,padding=32,environment="acceleration_gametest:projection_expires_and_restores_original_mode")
     public void projectionHasNoTimerAndLungeReunitesAfterForwardMovement(GameTestHelper c){
         setup(c);var p=player(c);Vec3 origin=p.position();

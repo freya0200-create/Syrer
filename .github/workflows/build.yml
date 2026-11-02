@@ -69,8 +69,8 @@ jobs:
           PY
           if [ "$BUILD_RESULT" = success ]; then
             mkdir -p downloads
-            cp build/libs/acceleration-1.7.1+mc26.3.jar downloads/
-            (cd downloads && sha256sum acceleration-1.7.1+mc26.3.jar > SHA256SUMS.txt)
+            cp build/libs/acceleration-1.7.2+mc26.3.jar downloads/
+            (cd downloads && sha256sum acceleration-1.7.2+mc26.3.jar > SHA256SUMS.txt)
           fi
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com

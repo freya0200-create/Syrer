@@ -146,8 +146,15 @@ public final class SoulMode {
         // The real player's armor, effects, totem, invulnerability frames and health handle this hit.
         // External damage stays projected; only the owner's own direct hit recalls them.
         boolean hit;
+        Vec3 momentum=owner.getDeltaMovement();
+        boolean needsSync=owner.needsSync,syncVelocity=owner.syncVelocity;
         BODY_DAMAGE.add(owner.getUUID());
-        try{hit=owner.hurtServer(owner.level(),source,amount);}finally{BODY_DAMAGE.remove(owner.getUUID());}
+        try{hit=owner.hurtServer(owner.level(),source,amount);}
+        finally{
+            BODY_DAMAGE.remove(owner.getUUID());
+            // Body hits share health, not the native damage impulse or its motion packets.
+            owner.setDeltaMovement(momentum);owner.needsSync=needsSync;owner.syncVelocity=syncVelocity;
+        }
         if(body instanceof LivingEntity living){living.setHealth(owner.getHealth());if(hit)living.hurtTime=10;}
         if(!owner.isAlive())finish(owner,body.position());
         else if(hit&&source.getEntity()==owner&&source.getDirectEntity()==owner
