@@ -152,7 +152,7 @@ public final class SoulMode {
         return hit;
     }
     private static boolean eligible(ServerPlayer player,Entity victim){
-        if(victim==player||ProjectionPhysics.active(victim)||!victim.isAlive()||victim.isInvulnerable()||victim.entityTags().contains(BODY_TAG)||victim.level()!=player.level())return false;
+        if(victim==player||ProjectionPhysics.active(victim)||!victim.isAlive()||victim.isPermanentlyInvulnerable()||victim.entityTags().contains(BODY_TAG)||victim.level()!=player.level())return false;
         return !(victim instanceof Player target)||(!target.isCreative()&&!target.isSpectator()&&player.level().getGameRules().get(net.minecraft.world.level.gamerules.GameRules.PVP)&&player.canHarmPlayer(target));
     }
     public static boolean ghostJoustHit(Entity target,DamageSource source){

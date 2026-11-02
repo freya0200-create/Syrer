@@ -8,11 +8,11 @@ public final class AccelerationClient implements ClientModInitializer {
     @Override public void onInitializeClient(){
         var category=net.minecraft.client.KeyMapping.Category.register(AccelerationMod.id("controls"));
         momentumKey=net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping(
-            "key.acceleration.activate_momentum",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_I,category));
+            "key.acceleration.activate_momentum",com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_I,category));
         phaseKey=net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping(
-            "key.acceleration.phase",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_6,category));
+            "key.acceleration.phase",com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_6,category));
         phaseModeKey=net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping(
-            "key.acceleration.phase_mode",com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,org.lwjgl.glfw.GLFW.GLFW_KEY_7,category));
+            "key.acceleration.phase_mode",com.mojang.blaze3d.platform.InputConstants.Type.KEYBOARD,org.lwjgl.sdl.SDLScancode.SDL_SCANCODE_7,category));
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client->{
             while(phaseModeKey.consumeClick()){
                 if(client.player!=null&&client.level!=null&&client.gui.screen()==null&&client.gui.overlay()==null&&ClientPlayNetworking.canSend(SoulPackets.Action.TYPE))
