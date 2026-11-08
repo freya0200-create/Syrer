@@ -1,0 +1,1 @@
+0a04d04082a6010a11fda7831d5f1de4e60168b189f88d961cda6681d4c5c220  /workspace/acceleration-release-168/downloads/acceleration-1.6.8+mc26.2.jar
